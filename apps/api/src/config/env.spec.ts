@@ -16,6 +16,11 @@ const prod = {
   LINK_TOKEN_KEY: 'l'.repeat(40),
   OTP_PEPPER: 'o'.repeat(40),
   PII_HASH_KEY: 'p'.repeat(40),
+  WHATSAPP_PHONE_NUMBER_ID: '1234567890',
+  WHATSAPP_WABA_ID: '9876543210',
+  WHATSAPP_ACCESS_TOKEN: 'EAAG-token',
+  WHATSAPP_APP_SECRET: 'a'.repeat(32),
+  WHATSAPP_VERIFY_TOKEN: 'v'.repeat(16),
 };
 
 function problemsFor(env: Record<string, string>): string[] {
@@ -66,6 +71,16 @@ describe('loadConfig', () => {
     ['LINK_TOKEN_KEY', 'dev-only-link-token-key-change-me-0123456789', 'LINK_TOKEN_KEY must be set to a real secret in production'],
   ])('refuses to boot in production when %s=%s', (key, value, message) => {
     expect(problemsFor({ ...prod, [key]: value })).toEqual([message]);
+  });
+
+  it('needs WhatsApp credentials in production', () => {
+    const rest: Record<string, string> = { ...prod };
+    delete rest.WHATSAPP_ACCESS_TOKEN;
+    delete rest.WHATSAPP_APP_SECRET;
+    expect(problemsFor(rest)).toEqual([
+      'WHATSAPP_ACCESS_TOKEN is required in production',
+      'WHATSAPP_APP_SECRET must be set to a real secret in production',
+    ]);
   });
 
   it('allows the dev bypass outside production', () => {

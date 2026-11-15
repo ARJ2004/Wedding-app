@@ -148,6 +148,8 @@ model guests {
   import_rows_import_rows_match_guest_idToguests                        import_rows[]                @relation("import_rows_match_guest_idToguests")
   import_rows_import_rows_result_guest_idToguests                       import_rows[]                @relation("import_rows_result_guest_idToguests")
   media_objects                                                         media_objects[]
+  message_recipients                                                    message_recipients[]
+  messaging_webhook_events                                              messaging_webhook_events[]
   otp_challenges                                                        otp_challenges[]
   push_devices                                                          push_devices[]
   refresh_tokens                                                        refresh_tokens[]
@@ -197,6 +199,7 @@ model media_objects {
   guests                                          guests?       @relation(fields: [uploaded_by_guest_id], references: [id], onUpdate: NoAction)
   users                                           users?        @relation(fields: [uploaded_by_user_id], references: [id], onUpdate: NoAction)
   weddings                                        weddings      @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  messages                                        messages[]
   weddings_weddings_cover_media_idTomedia_objects weddings[]    @relation("weddings_cover_media_idTomedia_objects")
 
   @@index([wedding_id, kind, created_at(sort: Desc)], map: "media_wedding_kind_idx")
@@ -231,33 +234,34 @@ model organizations {
 }
 
 model parties {
-  id                   String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  wedding_id           String            @db.Uuid
+  id                   String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wedding_id           String               @db.Uuid
   label                String
-  link_token_hash      Bytes?            @unique
-  link_rotated_at      DateTime?         @db.Timestamptz(6)
-  plus_ones_allowed    Int               @default(0)
-  is_outstation        Boolean           @default(false)
-  preferred_language   String            @default("en")
-  created_at           DateTime          @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime          @default(now()) @db.Timestamptz(6)
-  deleted_at           DateTime?         @db.Timestamptz(6)
+  link_token_hash      Bytes?               @unique
+  link_rotated_at      DateTime?            @db.Timestamptz(6)
+  plus_ones_allowed    Int                  @default(0)
+  is_outstation        Boolean              @default(false)
+  preferred_language   String               @default("en")
+  created_at           DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime             @default(now()) @db.Timestamptz(6)
+  deleted_at           DateTime?            @db.Timestamptz(6)
   city                 String?
   notes                String?
-  source               String            @default("manual")
-  import_job_id        String?           @db.Uuid
-  merged_into_party_id String?           @db.Uuid
-  updated_by           String?           @db.Uuid
-  link_version         Int               @default(1)
-  link_revoked_at      DateTime?         @db.Timestamptz(6)
+  source               String               @default("manual")
+  import_job_id        String?              @db.Uuid
+  merged_into_party_id String?              @db.Uuid
+  updated_by           String?              @db.Uuid
+  link_version         Int                  @default(1)
+  link_revoked_at      DateTime?            @db.Timestamptz(6)
   guest_devices        guest_devices[]
   guests               guests[]
+  message_recipients   message_recipients[]
   otp_challenges       otp_challenges[]
-  import_jobs          import_jobs?      @relation(fields: [import_job_id], references: [id], onUpdate: NoAction, map: "parties_import_job_fk")
-  parties              parties?          @relation("partiesToparties", fields: [merged_into_party_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_parties        parties[]         @relation("partiesToparties")
-  users                users?            @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  weddings             weddings          @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  import_jobs          import_jobs?         @relation(fields: [import_job_id], references: [id], onUpdate: NoAction, map: "parties_import_job_fk")
+  parties              parties?             @relation("partiesToparties", fields: [merged_into_party_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_parties        parties[]            @relation("partiesToparties")
+  users                users?               @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  weddings             weddings             @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   party_auth_state     party_auth_state?
   party_groups         party_groups[]
   rsvps                rsvps[]
@@ -341,6 +345,7 @@ model users {
   guests                                               guests[]
   import_jobs                                          import_jobs[]
   media_objects                                        media_objects[]
+  messages                                             messages[]
   organization_members                                 organization_members[]
   organizations                                        organizations[]
   parties                                              parties[]
@@ -432,6 +437,12 @@ model weddings {
   import_jobs                                          import_jobs[]
   import_rows                                          import_rows[]
   media_objects                                        media_objects[]
+  message_deliveries                                   message_deliveries[]
+  message_quotas                                       message_quotas?
+  message_recipients                                   message_recipients[]
+  messages                                             messages[]
+  messaging_opt_outs                                   messaging_opt_outs[]
+  messaging_webhook_events                             messaging_webhook_events[]
   otp_challenges                                       otp_challenges[]
   parties                                              parties[]
   party_auth_state                                     party_auth_state[]
@@ -816,4 +827,201 @@ model wedding_retention_state {
   weddings    weddings  @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([wedding_id, data_class])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model message_deliveries {
+  id                        String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wedding_id                String                     @db.Uuid
+  message_id                String                     @db.Uuid
+  guest_id                  String                     @db.Uuid
+  channel                   String
+  provider                  String
+  variant_id                String?                    @db.Uuid
+  to_hash                   Bytes?
+  status                    String                     @default("queued")
+  status_rank               Int                        @default(0) @db.SmallInt
+  provider_message_id       String?
+  attempts                  Int                        @default(0) @db.SmallInt
+  next_attempt_at           DateTime?                  @db.Timestamptz(6)
+  error_code                String?
+  error_detail              String?
+  billable_units            Int                        @default(0) @db.SmallInt
+  is_fallback               Boolean                    @default(false)
+  fallback_due_at           DateTime?                  @db.Timestamptz(6)
+  fallback_done             Boolean                    @default(false)
+  queued_at                 DateTime                   @default(now()) @db.Timestamptz(6)
+  claimed_at                DateTime?                  @db.Timestamptz(6)
+  sent_at                   DateTime?                  @db.Timestamptz(6)
+  delivered_at              DateTime?                  @db.Timestamptz(6)
+  read_at                   DateTime?                  @db.Timestamptz(6)
+  failed_at                 DateTime?                  @db.Timestamptz(6)
+  message_recipients        message_recipients         @relation(fields: [message_id, guest_id], references: [message_id, guest_id], onDelete: Cascade, onUpdate: NoAction)
+  message_template_variants message_template_variants? @relation(fields: [variant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  weddings                  weddings                   @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  messaging_webhook_events  messaging_webhook_events[]
+
+  @@unique([message_id, guest_id, channel])
+  @@index([message_id, status], map: "deliveries_message_status_idx")
+  @@index([wedding_id, queued_at], map: "deliveries_wedding_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model message_quotas {
+  wedding_id     String    @id @db.Uuid
+  limit_units    Int
+  reserved_units Int       @default(0)
+  used_units     Int       @default(0)
+  warned_80_at   DateTime? @db.Timestamptz(6)
+  blocked_at     DateTime? @db.Timestamptz(6)
+  updated_at     DateTime  @default(now()) @db.Timestamptz(6)
+  weddings       weddings  @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model message_recipients {
+  message_id         String               @db.Uuid
+  guest_id           String               @db.Uuid
+  wedding_id         String               @db.Uuid
+  party_id           String               @db.Uuid
+  language           String
+  reply_ref          String               @unique
+  suppressed_reason  String?
+  read_in_app_at     DateTime?            @db.Timestamptz(6)
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  message_deliveries message_deliveries[]
+  guests             guests               @relation(fields: [guest_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  messages           messages             @relation(fields: [message_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  parties            parties              @relation(fields: [party_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  weddings           weddings             @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([message_id, guest_id])
+  @@index([guest_id, created_at(sort: Desc)], map: "message_recipients_inbox_idx")
+  @@index([wedding_id, created_at], map: "message_recipients_wedding_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model message_template_variants {
+  id                     String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  template_id            String               @db.Uuid
+  channel                String
+  language               String
+  provider               String
+  provider_template_name String?
+  dlt_template_id        String?
+  body                   String
+  params_schema          Json                 @default("[]")
+  buttons                Json                 @default("[]")
+  header_kind            String?
+  approval_status        String               @default("draft")
+  rejection_reason       String?
+  status_synced_at       DateTime?            @db.Timestamptz(6)
+  created_at             DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime             @default(now()) @db.Timestamptz(6)
+  message_deliveries     message_deliveries[]
+  message_templates      message_templates    @relation(fields: [template_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([template_id, channel, language, provider])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model message_templates {
+  id                        String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key                       String                      @unique
+  purpose                   String
+  category                  String
+  host_selectable           Boolean                     @default(false)
+  description               String?
+  created_at                DateTime                    @default(now()) @db.Timestamptz(6)
+  message_template_variants message_template_variants[]
+  messages                  messages[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model messages {
+  id                     String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wedding_id             String               @db.Uuid
+  kind                   String
+  template_id            String?              @db.Uuid
+  title                  String?
+  body_text              String?
+  source_language        String               @default("en")
+  media_id               String?              @db.Uuid
+  link_target            String?
+  params                 Json                 @default("{}")
+  context                Json                 @default("{}")
+  audience               Json                 @default("{}")
+  channels               String[]             @default(["whatsapp", "push"])
+  sms_fallback           Boolean              @default(true)
+  fallback_after_minutes Int                  @default(10)
+  priority               String               @default("normal")
+  status                 String               @default("draft")
+  scheduled_at           DateTime?            @db.Timestamptz(6)
+  version                Int                  @default(1)
+  idempotency_key        String?
+  recipient_count        Int?
+  stats                  Json                 @default("{}")
+  created_by_user_id     String?              @db.Uuid
+  created_by_module      String?
+  sending_started_at     DateTime?            @db.Timestamptz(6)
+  sent_at                DateTime?            @db.Timestamptz(6)
+  cancelled_at           DateTime?            @db.Timestamptz(6)
+  created_at             DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime             @default(now()) @db.Timestamptz(6)
+  message_recipients     message_recipients[]
+  users                  users?               @relation(fields: [created_by_user_id], references: [id], onUpdate: NoAction)
+  media_objects          media_objects?       @relation(fields: [media_id], references: [id], onUpdate: NoAction)
+  message_templates      message_templates?   @relation(fields: [template_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  weddings               weddings             @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([wedding_id, created_at(sort: Desc), id], map: "messages_wedding_list_idx")
+}
+
+model messaging_log_sink {
+  id                  BigInt   @id @default(autoincrement())
+  channel             String
+  to_address          String
+  template_key        String?
+  language            String?
+  rendered            String
+  payload             Json
+  provider_message_id String   @unique
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model messaging_opt_outs {
+  phone_hash Bytes
+  channel    String
+  source     String
+  wedding_id String?   @db.Uuid
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  weddings   weddings? @relation(fields: [wedding_id], references: [id], onUpdate: NoAction)
+
+  @@id([phone_hash, channel])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model messaging_webhook_events {
+  id                 BigInt              @id @default(autoincrement())
+  provider           String
+  kind               String
+  external_id        String
+  wedding_id         String?             @db.Uuid
+  guest_id           String?             @db.Uuid
+  delivery_id        String?             @db.Uuid
+  from_hash          Bytes?
+  inbound_type       String?
+  action             String?
+  route_status       String              @default("pending")
+  route_result       Json?
+  payload            Json
+  attempts           Int                 @default(0) @db.SmallInt
+  received_at        DateTime            @default(now()) @db.Timestamptz(6)
+  processed_at       DateTime?           @db.Timestamptz(6)
+  message_deliveries message_deliveries? @relation(fields: [delivery_id], references: [id], onUpdate: NoAction)
+  guests             guests?             @relation(fields: [guest_id], references: [id], onUpdate: NoAction)
+  weddings           weddings?           @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([provider, kind, external_id])
 }

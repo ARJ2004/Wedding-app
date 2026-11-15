@@ -1,0 +1,62 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "102290129340398",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": { "display_phone_number": "15550783881", "phone_number_id": "106540352242922" },
+            "contacts": [{ "profile": { "name": "Kiran" }, "wa_id": "919845012399" }],
+            "statuses": [
+              {
+                "id": "wamid.HBgLMTY1MDM4Nzk0MzkVAgARGBI3MTE5MjNEMEZFNEQyN0QwMDcA",
+                "status": "delivered",
+                "timestamp": "1786000000",
+                "recipient_id": "919845012399",
+                "biz_opaque_callback_data": "REPLACE_DELIVERY_ID",
+                "pricing": { "billable": true, "pricing_model": "PMP", "category": "utility" }
+              },
+              {
+                "id": "wamid.FAILED000000000000000000000000000000",
+                "status": "failed",
+                "timestamp": "1786000005",
+                "recipient_id": "919845000000",
+                "errors": [{ "code": 131026, "title": "Message undeliverable" }]
+              }
+            ],
+            "messages": [
+              {
+                "from": "919845012399",
+                "id": "wamid.INBOUND0000000000000000000000000001",
+                "timestamp": "1786000010",
+                "type": "button",
+                "context": { "from": "15550783881", "id": "wamid.HBgLMTY1MDM4Nzk0MzkVAgARGBI3MTE5MjNEMEZFNEQyN0QwMDcA" },
+                "button": { "payload": "rsv.attend|k3j9m2p4q8r7s6t5", "text": "Attending" }
+              },
+              {
+                "from": "919845012399",
+                "id": "wamid.INBOUND0000000000000000000000000002",
+                "timestamp": "1786000020",
+                "type": "text",
+                "text": { "body": "STOP" }
+              }
+            ]
+          }
+        },
+        {
+          "field": "message_template_status_update",
+          "value": {
+            "event": "APPROVED",
+            "message_template_id": 594425479261596,
+            "message_template_name": "announcement_text",
+            "message_template_language": "en",
+            "reason": "NONE"
+          }
+        }
+      ]
+    }
+  ]
+}

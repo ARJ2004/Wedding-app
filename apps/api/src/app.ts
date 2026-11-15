@@ -26,6 +26,7 @@ import { opsRoutes } from './modules/ops';
 import { orgRoutes } from './modules/team';
 import { weddingRoutes } from './modules/weddings';
 import { realtimeRoutes } from './modules/realtime';
+import { createWhatsAppProvider, webhookRouter } from './modules/messaging';
 import { PgListener, prismaRtStore, RealtimeHub } from './common/sse';
 
 function packageVersion(): string {
@@ -60,6 +61,17 @@ export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = 
   );
   const devS3 = deps.config.NODE_ENV !== 'production' ? fakeS3Router(deps.objectStore) : null;
   if (devS3) app.use(devS3); // before express.json: takes raw bodies
+  const whatsapp = deps.whatsapp ?? createWhatsAppProvider(deps.config, deps.prisma);
+  // Provider webhooks: raw body for the signature, and outside the per-IP rate limit.
+  app.use(
+    webhookRouter({
+      prisma: deps.prisma,
+      logger: deps.logger,
+      providers: [whatsapp],
+      piiHashKey: deps.config.PII_HASH_KEY,
+      verifyToken: deps.config.WHATSAPP_VERIFY_TOKEN,
+    }),
+  );
   app.use(express.json({ limit: '256kb' }));
   app.use(limit(deps.config.RATE_LIMIT_PER_MINUTE));
   app.use('/v1/auth', limit(deps.config.AUTH_RATE_LIMIT_PER_MINUTE, 'AUTH_RATE_LIMITED'));

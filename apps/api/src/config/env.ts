@@ -39,6 +39,14 @@ const EnvSchema = z.object({
   /** Dev only, OBJECT_STORE=fake: base URL clients use for the fake upload sink ('' = same origin). */
   FAKE_S3_PUBLIC_BASE: z.string().optional(),
   MESSAGING_PROVIDER: z.enum(['meta', 'log']).default('meta'),
+  /** Meta WhatsApp Cloud API (MSG-01). Needs credentials: a Meta app, WABA and phone number id. */
+  WHATSAPP_GRAPH_BASE: z.string().url().default('https://graph.facebook.com/v21.0'),
+  WHATSAPP_PHONE_NUMBER_ID: optionalString,
+  WHATSAPP_WABA_ID: optionalString,
+  WHATSAPP_ACCESS_TOKEN: optionalString,
+  /** Signs webhooks (X-Hub-Signature-256). The dev default lets local tools and tests sign fixtures. */
+  WHATSAPP_APP_SECRET: z.string().min(16).default('dev-only-whatsapp-app-secret-0123'),
+  WHATSAPP_VERIFY_TOKEN: z.string().min(8).default('dev-only-verify-token'),
   OPENAPI_DOCS: bool.default(false),
   GOOGLE_WEB_CLIENT_ID: optionalString,
   SENTRY_DSN: optionalString,
@@ -74,6 +82,14 @@ function productionProblems(c: AppConfig): string[] {
   if (c.DEV_AUTH_ENABLED) problems.push('DEV_AUTH_ENABLED must be false in production');
   if (c.OBJECT_STORE === 'fake' || c.OBJECT_STORE === 'local') problems.push(`OBJECT_STORE=${c.OBJECT_STORE} is not allowed in production`);
   if (c.MESSAGING_PROVIDER === 'log') problems.push('MESSAGING_PROVIDER=log is not allowed in production');
+  if (c.MESSAGING_PROVIDER === 'meta') {
+    for (const k of ['WHATSAPP_PHONE_NUMBER_ID', 'WHATSAPP_WABA_ID', 'WHATSAPP_ACCESS_TOKEN'] as const) {
+      if (!c[k]) problems.push(`${k} is required in production`);
+    }
+    for (const k of ['WHATSAPP_APP_SECRET', 'WHATSAPP_VERIFY_TOKEN'] as const) {
+      if (c[k].startsWith('dev-only-')) problems.push(`${k} must be set to a real secret in production`);
+    }
+  }
   if (c.OPENAPI_DOCS) problems.push('OPENAPI_DOCS must be false in production');
   if (!c.GOOGLE_WEB_CLIENT_ID) problems.push('GOOGLE_WEB_CLIENT_ID is required in production');
   for (const k of ['LINK_TOKEN_KEY', 'OTP_PEPPER', 'PII_HASH_KEY'] as const) {

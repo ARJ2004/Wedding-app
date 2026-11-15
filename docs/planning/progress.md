@@ -83,7 +83,7 @@ Tracked by the Ralph loop (`.claude/ralph/PROMPT.md`). Status: `todo`, `doing`, 
 
 | Story | Title | Pts | Status | Note |
 | --- | --- | --- | --- | --- |
-| MSG-01 | Provider abstraction + WhatsApp | 8 | todo | |
+| MSG-01 | Provider abstraction + WhatsApp | 8 | done | Migration 0004 (all 07-msg tables); MessagingProvider port with MetaCloudProvider (Graph API send with biz_opaque_callback_data, error→retryable map, template list/submit) and LogSinkProvider (writes messaging_log_sink; numbers ending 99999/99998 fail final/retryable); signed webhooks (raw body, HMAC-SHA256, Meta handshake) apply statuses inline by monotonic rank, store inbound replies (phone as HMAC only) and template status; production refuses missing WhatsApp config. Needs credentials: Meta app secret, WABA id, phone number id, system-user token. |
 | MSG-02 | Template catalogue | 3 | todo | |
 | MSG-11 | Inbound reply router (new) | 3 | todo | |
 | MSG-03 | Announcement composer | 8 | todo | |
