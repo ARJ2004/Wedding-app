@@ -14,7 +14,7 @@ jobs:
     name: Release JS bundle has no dev code
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
@@ -26,7 +26,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
@@ -52,7 +52,7 @@ jobs:
       MEHFIL_UPLOAD_KEY_PASSWORD: ${{ secrets.MEHFIL_UPLOAD_KEY_PASSWORD }}
       MEHFIL_PLAY_JSON_KEY: ${{ github.workspace }}/play.json
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
