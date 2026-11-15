@@ -19,6 +19,8 @@ export function useMessages(weddingId: string) {
   return useQuery({
     queryKey: msgKeys.list(weddingId),
     queryFn: async (): Promise<Message[]> => unwrap(await api.GET('/v1/weddings/{weddingId}/messages', { params: { path: { weddingId }, query: {} } })).items,
+    // Poll while something is going out; MSG-06 switches this to SSE progress.
+    refetchInterval: (q) => (q.state.data?.some((m) => m.status === 'resolving' || m.status === 'sending') ? 3000 : false),
   });
 }
 
@@ -106,5 +108,23 @@ export function useSendTest(weddingId: string) {
   return useMutation({
     mutationFn: async (messageId: string) =>
       unwrap(await api.POST('/v1/weddings/{weddingId}/messages/{messageId}/test', { params: { path: { weddingId, messageId } } })),
+  });
+}
+
+/** Sends a saved draft now. The key is derived from the composer's draft key, so a retry after a lost response can't send twice. */
+export function useSendMessage(weddingId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { messageId: string; idempotencyKey: string }) =>
+      unwrap(
+        await api.POST('/v1/weddings/{weddingId}/messages/{messageId}/send', {
+          params: { path: { weddingId, messageId: input.messageId } },
+          headers: { 'Idempotency-Key': input.idempotencyKey },
+          body: {},
+        }),
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: msgKeys.list(weddingId) });
+    },
   });
 }

@@ -8,7 +8,7 @@ import { Button, Card, Chip, ChipRow, ErrorState, Loading, Screen, SectionLabel,
 import { useEvents } from '../events';
 import { useGroups } from '../guests';
 import { useComposerDraft } from './draft';
-import { useAudiencePreview, useMessage, useMessagePreview, useMessageTemplates, useSaveDraft, useSendTest, type AudienceSpec } from './hooks';
+import { useAudiencePreview, useMessage, useMessagePreview, useMessageTemplates, useSaveDraft, useSendMessage, useSendTest, type AudienceSpec } from './hooks';
 
 type Mode = 'everyone' | 'groups' | 'events';
 const modeOf = (a: AudienceSpec): Mode => (a.events?.length || a.rsvp ? 'events' : a.groups?.length ? 'groups' : 'everyone');
@@ -32,6 +32,8 @@ export function ComposerScreen({ messageId, onDone }: { messageId: string | null
   const saved = useMessage(weddingId, draft?.messageId ?? null);
   const save = useSaveDraft(weddingId);
   const sendTest = useSendTest(weddingId);
+  const send = useSendMessage(weddingId);
+  const [confirming, setConfirming] = useState(false);
   const preview = useMessagePreview(weddingId, saved.data);
   const audience = useMemo(() => draft?.audience ?? {}, [draft?.audience]);
   const count = useAudiencePreview(weddingId, audience, draft?.templateKey ?? null);
@@ -65,6 +67,26 @@ export function ComposerScreen({ messageId, onDone }: { messageId: string | null
           setNotice(t('msg.saved'));
         },
         onError: (e) => setNotice(e instanceof ApiError && e.code === 'MSG_VERSION_CONFLICT' ? t('msg.conflict') : t('msg.saveFailed')),
+      },
+    );
+  };
+  const onSend = () => {
+    if (!saved.data) return;
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
+    send.mutate(
+      { messageId: saved.data.id, idempotencyKey: `${draft.idempotencyKey}-send` },
+      {
+        onSuccess: () => {
+          clear();
+          onDone();
+        },
+        onError: (e) => {
+          setConfirming(false);
+          setNotice(e instanceof ApiError && e.code === 'MSG_AUDIENCE_EMPTY' ? t('msg.audienceEmpty') : t('msg.sendFailed'));
+        },
       },
     );
   };
@@ -178,9 +200,15 @@ export function ComposerScreen({ messageId, onDone }: { messageId: string | null
           />
         </View>
       ) : null}
-      <Text variant="caption" tone="muted">
-        {t('msg.sendingSoon')}
-      </Text>
+      {saved.data && !dirty ? (
+        <Button
+          label={confirming ? t('msg.confirmSend', { count: count.data?.byChannel.whatsapp ?? 0 }) : t('msg.sendNow')}
+          variant={confirming ? 'danger' : 'primary'}
+          onPress={onSend}
+          loading={send.isPending}
+          testID="msg-send"
+        />
+      ) : null}
       {notice ? (
         <Text tone="primary" testID="msg-notice">
           {notice}

@@ -277,10 +277,13 @@ if (want('msg-')) {
     await page.getByTestId('msg-preview').scrollIntoViewIfNeeded();
     await shot(page, `msg-03-preview-test-sent-${scheme}`);
     if (scheme === 'light') {
-      await page.getByTestId('msg-back').click();
-      await page.getByTestId('screen-messages').waitFor();
-      await page.waitForTimeout(800);
-      await shot(page, 'msg-04-list-with-draft');
+      // MSG-05: send for real (dev log sink); the worker resolves and fans out.
+      await page.getByTestId('msg-send').click();
+      await page.getByTestId('msg-send').scrollIntoViewIfNeeded();
+      await shot(page, 'msg-04-confirm-send');
+      await page.getByTestId('msg-send').click();
+      await page.getByText('Sent', { exact: true }).first().waitFor({ timeout: 30000 });
+      await shot(page, 'msg-05-list-sent');
     }
     await ctx.close();
   }

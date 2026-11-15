@@ -7,6 +7,7 @@ import { writeAudit } from '../audit';
 import { WeddingParams } from '../weddings/schemas';
 import { AudienceSpec, resolveAudience } from './audience';
 import type { MessagingProvider } from './providers';
+import type { FanoutService } from './fanout';
 
 const Lang = z.enum(['en', 'hi', 'kn']);
 const Channel = z.enum(['whatsapp', 'push']);
@@ -97,7 +98,7 @@ export function renderTemplate(body: string, schema: { name: string }[], values:
 /**
  * Announcement composer API (MSG-03, 07-msg §4). Sending itself (resolve → fan-out) is MSG-05.
  */
-export function messageRoutes(ctx: RouteContext, deps: { prisma: PrismaClient; provider: MessagingProvider; piiHashKey: string }) {
+export function messageRoutes(ctx: RouteContext, deps: { prisma: PrismaClient; provider: MessagingProvider; piiHashKey: string; fanout: FanoutService }) {
   const { prisma } = deps;
   const W = '/v1/weddings/:weddingId/messages';
 
@@ -324,6 +325,28 @@ export function messageRoutes(ctx: RouteContext, deps: { prisma: PrismaClient; p
       if (!result.ok) throw new AppError('MSG_PROVIDER_FAILED', 'WhatsApp did not accept the test message', 502, { code: result.code });
       await writeAudit(prisma, { weddingId: params.weddingId, actor: { type: 'user', id: req.principal!.userId }, action: 'message.test', entityType: 'message', entityId: m.id });
       return { sentTo: `•••• ${user.phone_e164.slice(-4)}`, providerMessageId: result.providerMessageId };
+    },
+  });
+  defineRoute(ctx, {
+    method: 'post',
+    path: `${W}/:messageId/send`,
+    summary: 'Send a draft now (send an Idempotency-Key); 202 while it goes out',
+    tags: ['messaging'],
+    auth: 'host',
+    permission: 'message.send',
+    before: [idempotent(prisma, { scope: (req) => `user:${req.principal!.userId}`, route: `${W}/:messageId/send`, weddingId: (req) => String(req.params.weddingId) })],
+    request: { params: MessageParams, body: z.object({ scheduledAt: z.string().datetime().nullish() }) },
+    response: { status: 202, schema: z.object({ status: z.string(), recipientCountEstimate: z.number().int() }) },
+    errors: [404, 409, 422],
+    handler: async ({ params, body, req }) => {
+      if (body.scheduledAt) throw new AppError('MSG_SCHEDULE_UNAVAILABLE', 'Scheduling arrives soon; send now for the moment', 400);
+      const m = await load(params.weddingId, params.messageId);
+      if (m.status !== 'draft') throw new AppError('MSG_ALREADY_SENT', 'This message has already gone out', 409);
+      await template(m.message_templates?.key ?? '');
+      const members = await resolveAudience(prisma, params.weddingId, AudienceSpec.parse(m.audience ?? {}), deps.piiHashKey);
+      if (!members.some((x) => !x.suppressed)) throw new AppError('MSG_AUDIENCE_EMPTY', 'Nobody in this audience can get a message', 409);
+      if (!(await deps.fanout.startSend(m, req.principal!.userId))) throw new AppError('MSG_VERSION_CONFLICT', 'Someone else changed this message; reload it', 409);
+      return { status: 'resolving', recipientCountEstimate: members.length };
     },
   });
 }

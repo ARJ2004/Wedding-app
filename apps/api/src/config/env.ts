@@ -47,6 +47,8 @@ const EnvSchema = z.object({
   /** Signs webhooks (X-Hub-Signature-256). The dev default lets local tools and tests sign fixtures. */
   WHATSAPP_APP_SECRET: z.string().min(16).default('dev-only-whatsapp-app-secret-0123'),
   WHATSAPP_VERIFY_TOKEN: z.string().min(8).default('dev-only-verify-token'),
+  /** WhatsApp sends per second per worker process (Meta tier is 80/s per number). */
+  MSG_WA_RATE: z.coerce.number().int().min(1).max(500).default(60),
   OPENAPI_DOCS: bool.default(false),
   GOOGLE_WEB_CLIENT_ID: optionalString,
   SENTRY_DSN: optionalString,

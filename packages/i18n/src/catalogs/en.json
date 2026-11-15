@@ -259,5 +259,8 @@
   "msg.testFailed": "The test didn't go out. Try again in a minute.",
   "msg.noPhone": "Add your WhatsApp number to your profile to get test messages.",
   "msg.discard": "Close draft",
-  "msg.sendingSoon": "Sending to guests is coming in the next update."
+  "msg.sendNow": "Send now",
+  "msg.confirmSend": "{count, plural, one {Tap again to send # WhatsApp message} other {Tap again to send # WhatsApp messages}}",
+  "msg.audienceEmpty": "Nobody in this audience can get a message. Pick a different audience.",
+  "msg.sendFailed": "Couldn't send. Nothing went out; try again."
 }
