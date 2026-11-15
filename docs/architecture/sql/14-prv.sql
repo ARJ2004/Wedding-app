@@ -164,7 +164,7 @@ CREATE TABLE retention_runs (
 CREATE INDEX retention_runs_job_idx ON retention_runs (job, started_at DESC);
 
 -- ── Indexes on core tables needed by purge ──────────────────────────────────
--- Audit rows about a guest are scrubbed (before/after -> redacted) on erasure.
-CREATE INDEX audit_entity_idx ON audit_log (entity_type, entity_id);
+-- Audit rows about a guest are scrubbed on erasure using 10-rol.sql's audit_wedding_entity_idx,
+-- redacted_at column and the `SET LOCAL mehfil.audit_maintenance = 'on'` guard (no index added here).
 -- Find a guest's own uploads on erasure/export.
 CREATE INDEX media_uploader_guest_idx ON media_objects (uploaded_by_guest_id) WHERE uploaded_by_guest_id IS NOT NULL;

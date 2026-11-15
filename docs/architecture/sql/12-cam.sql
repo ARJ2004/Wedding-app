@@ -3,35 +3,23 @@
 -- media_objects (core) stays owned by the `media` module (generic presign / complete / process).
 -- Depends on: 000-core.sql only.
 
--- ── Wedding-level camera + gallery settings ──────────────────────────────────
--- SET-06 "Camera shot limit, reveal mode" is edited through the photos module's endpoints;
--- these values are NOT duplicated into weddings.settings.
-CREATE TABLE photo_settings (
-  wedding_id                 uuid PRIMARY KEY REFERENCES weddings(id) ON DELETE CASCADE,
-  camera_enabled             boolean NOT NULL DEFAULT true,
-  shot_limit_scope           text    NOT NULL DEFAULT 'event' CHECK (shot_limit_scope IN ('wedding','event')),
-  shot_limit                 int     NOT NULL DEFAULT 24  CHECK (shot_limit BETWEEN 1 AND 500),
-  gallery_upload_limit       int     NOT NULL DEFAULT 20  CHECK (gallery_upload_limit BETWEEN 0 AND 500), -- GAL-05, per guest per wedding
-  reveal_mode                text    NOT NULL DEFAULT 'immediate'
-                             CHECK (reveal_mode IN ('immediate','at_time','manual')),
-  default_reveal_offset      interval,                     -- reveal_mode=at_time: event end + offset (e.g. '10 hours' = next morning)
-  report_autohide_threshold  int     NOT NULL DEFAULT 3 CHECK (report_autohide_threshold BETWEEN 1 AND 50), -- GAL-03
-  guest_zip_enabled          boolean NOT NULL DEFAULT false, -- GAL-04; guests use "save all to phone" by default
-  updated_by                 uuid REFERENCES users(id) ON DELETE SET NULL,
-  updated_at                 timestamptz NOT NULL DEFAULT now(),
-  CHECK (reveal_mode <> 'at_time' OR default_reveal_offset IS NOT NULL)
-);
+-- ── Settings ─────────────────────────────────────────────────────────────────
+-- Wedding-level camera settings live in weddings.settings.camera (owned by SET, 03-set.md):
+--   shotLimit, limitScope ('wedding'|'event'), revealMode ('instant'|'next_morning'|'after_wedding'|'scheduled'),
+--   revealAt; CAM/GAL add galleryUploadLimit, reportAutohideThreshold, guestZipEnabled (see 12-cam.md §3).
+-- CAM owns their meaning; only per-event overrides and derived state live here.
 
 -- Per-event camera: QR routing code, overrides, open window and the effective reveal time.
 CREATE TABLE photo_event_settings (
   event_id        uuid PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,
   wedding_id      uuid NOT NULL REFERENCES weddings(id) ON DELETE CASCADE,   -- = events.wedding_id (service-enforced)
   camera_code     text NOT NULL UNIQUE CHECK (camera_code ~ '^[A-HJ-NP-Z2-9]{10}$'), -- public routing code in the QR; not a credential
-  camera_enabled  boolean,                          -- null = inherit photo_settings.camera_enabled
-  shot_limit      int CHECK (shot_limit BETWEEN 1 AND 500), -- null = inherit
+  camera_enabled  boolean NOT NULL DEFAULT true,    -- host can switch the camera off for one event
+  shot_limit      int CHECK (shot_limit BETWEEN 1 AND 200), -- null = inherit settings.camera.shotLimit (limitScope='event' only)
   opens_at        timestamptz,                      -- null = event.starts_at - 2h
   closes_at       timestamptz,                      -- null = event end (or start + 8h) + 6h
-  reveal_at       timestamptz NOT NULL DEFAULT '-infinity', -- effective; 'infinity' = manual, not yet revealed
+  reveal_override_at timestamptz,                   -- host "reveal now" / per-event time; wins over settings.camera
+  reveal_at       timestamptz NOT NULL DEFAULT '-infinity', -- effective = override or derived from revealMode; recomputed on change
   revealed_notified_at timestamptz,
   updated_at      timestamptz NOT NULL DEFAULT now()
 );

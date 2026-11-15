@@ -45,11 +45,11 @@ Delivers what Mehfil needs to handle guest and host personal data lawfully under
 
 ## 3. Data model
 
-Schema: [`sql/14-prv.sql`](./sql/14-prv.sql). **Schema check passed** (`scripts/check-schema.sh arch_prv 000-core.sql 14-prv.sql` → `OK: 25 tables`). EXPLAIN on 100k media rows / 2k retention rows / 20k consents confirmed `media_delete_after_idx`, `wedding_retention_due_idx` and `consents_one_active` (index-only) are used.
+Schema: [`sql/14-prv.sql`](./sql/14-prv.sql). **Schema check passed** (`scripts/check-schema.sh arch_prv 000-core.sql 14-prv.sql` → `OK: 25 tables`; full run of all 26 design files → `OK: 138 tables`). EXPLAIN on 100k media rows / 2k retention rows / 20k consents confirmed `media_delete_after_idx`, `wedding_retention_due_idx` and `consents_one_active` (index-only) are used.
 
 | Table | Purpose | Notes |
 | --- | --- | --- |
-| `platform_staff` | Mehfil employees with `support` / `ops` / `admin` roles | Shared with OPS. Grants no wedding access. If E10 (ROL) defines an equivalent, merge into theirs. |
+| `platform_staff` | Mehfil employees with `support` / `ops` / `admin` roles | Shared with OPS. Grants no wedding access. 23-bil.sql's `platform_admins` duplicates it — merge into this one. |
 | `privacy_notices` | One row per notice version (`guest-2027.1`, `host-2027.1`): purposes covered, `requires_reconsent`, `effective_from`, `published_at` | Version format checked; purposes must be a subset of the core purpose enum. |
 | `privacy_notice_texts` | Text per locale (`en`, later `hi`, `kn`) with `sha256` | DPDP lets a principal read the notice in English or an Eighth-Schedule language — L10N adds rows. |
 | `consents` (core, altered) | + `source`, `locale`, `recorded_by_guest_id`, `withdrawn_source`; FK `notice_version → privacy_notices` | `consents_one_active` (unique, active only); `consents_wedding_purpose_idx` for host summary and gating. |
@@ -60,7 +60,7 @@ Schema: [`sql/14-prv.sql`](./sql/14-prv.sql). **Schema check passed** (`scripts/
 | `data_request_steps` | One row per module per request, `seq` = participant order, counts in `result` | Lets the job resume at the failed module; is the proof of what was deleted. |
 | `erasure_ledger` | Append-only record of every erasure (request, host delete, retention, consent withdrawal, wedding purge) | Mirrored to S3 (`mirrored_at`); replayed after restore. |
 | `retention_runs` | One row per retention job run with counts | Dashboard + evidence for audits. |
-| Indexes on core | `audit_entity_idx (entity_type, entity_id)`, `media_uploader_guest_idx` | Needed to find a guest's audit rows and uploads quickly. |
+| Index on core | `media_uploader_guest_idx` | Finds a guest's own uploads on erasure/export. Audit scrubbing uses 10-rol's `audit_wedding_entity_idx` and `redacted_at`. |
 
 ### Purposes (core enum, unchanged)
 
@@ -194,11 +194,11 @@ export interface PurgeParticipant {
 | 70 | `messaging` | anonymise deliveries (null phone, provider ids, rendered body; keep counts), delete inbound replies, suppressions keep **hash** of phone so STOP still applies |
 | 75 | `rsvp` | delete responses (headcount recomputed) |
 | 80 | `access` | revoke sessions/devices, OTP rows, `push_devices` |
-| 85 | `audit` | scrub `before`/`after` of rows with `entity_id = guest` → `{"redacted":true}`; keep action/time |
+| 85 | `audit` (ROL) | under `SET LOCAL mehfil.audit_maintenance = 'on'` (10-rol trigger), scrub `before`/`after` of rows with `entity_id = guest` → `{"redacted":true}`, set `redacted_at`; keep action/time |
 | 90 | `privacy` | consents removed (cascade), ledger entry written |
 | 95 | `guests` (GST) | hard delete guest; delete party if no members left; rotate link token |
 
-Wedding scope runs the same list with `kind: 'wedding'`, then tombstones the `weddings` row and deletes the S3 prefix `weddings/<id>/` (batched `DeleteObjects`, 1,000 keys/call).
+Wedding scope runs the same list with `kind: 'wedding'` (FACE first: its `ON DELETE RESTRICT` FK needs `faces.purgeWedding`), then tombstones the `weddings` row and deletes the S3 prefix `weddings/<id>/` (batched `DeleteObjects`, 1,000 keys/call).
 
 ### Queues and crons (pg-boss)
 
@@ -419,7 +419,7 @@ Fakes: `FakeObjectStore`, `LogSinkProvider`, fake clock for retention.
 | `billing.plan_changed`, `retention_extended_until` writer | E23 BIL | recompute (stub until S16; pilots are on a fixed plan) |
 | IDV per-wedding KMS keys | E17 IDV | wedding purge schedules key deletion |
 | FND-11 prod environment, OPS backups | E01, E26 | PRV-04 controls are applied there |
-| `platform_staff` | this file (shared with E26; merge with E10 if it defines staff) | admin views |
+| `platform_staff` | this file (shared with E26). **23-bil.sql defines a separate `platform_admins`** — BIL should reuse `platform_staff` (`staff_role = 'admin'`) | admin views |
 | Store accounts, app ids | APP / FND | PRV-06 |
 
 ## 13. Risks and open questions
