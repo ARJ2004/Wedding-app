@@ -5,7 +5,7 @@ import React, { useEffect, useMemo } from 'react';
 import { Linking } from 'react-native';
 import { WelcomeScreen } from '../features/auth-host';
 import { EventsScreen } from '../features/events';
-import { ConsentScreen, GuestEntryFlow, GuestHomeScreen, GuestMeScreen, RsvpScreen } from '../features/guest';
+import { ConsentScreen, GuestEntryFlow, GuestHomeScreen, GuestMeScreen, RsvpScreen, TravelScreen } from '../features/guest';
 import { GuestsScreen, ImportScreen } from '../features/guests';
 import { ComposerScreen, MessageDetailScreen, MessagesScreen } from '../features/messages';
 import { HeadcountScreen } from '../features/headcount';
@@ -19,7 +19,7 @@ import { useTheme } from '../theme/ThemeProvider';
 import { Loading, Screen, Text } from '../ui';
 
 type WelcomeStack = { Welcome: undefined };
-type GuestTabsList = { GuestHome: undefined; Rsvp: undefined; Me: undefined };
+type GuestTabsList = { GuestHome: undefined; Rsvp: undefined; Travel: undefined; Me: undefined };
 type PickerStack = { Picker: undefined; CreateWedding: undefined };
 type HostTabs = { Home: undefined; Events: undefined; Guests: undefined; Messages: undefined; More: undefined };
 type HomeStack = { HomeMain: undefined; Headcount: undefined };
@@ -77,7 +77,7 @@ function GuestsNavigator() {
 const TAB_GLYPH: Record<keyof HostTabs, string> = { Home: '⌂', Events: '◷', Guests: '☺', Messages: '✉', More: '≡' };
 
 const GuestTabs = createBottomTabNavigator<GuestTabsList>();
-const GUEST_GLYPH: Record<keyof GuestTabsList, string> = { GuestHome: '⌂', Rsvp: '✓', Me: '☺' };
+const GUEST_GLYPH: Record<keyof GuestTabsList, string> = { GuestHome: '⌂', Rsvp: '✓', Travel: '✈', Me: '☺' };
 
 function WelcomeNavigator() {
   const setMode = useMode((st) => st.setMode);
@@ -89,7 +89,7 @@ function WelcomeNavigator() {
 }
 
 /**
- * Guest mode (25-app §6). Tabs are Home · RSVP · Me until Travel (S6), Camera and Photos (S7)
+ * Guest mode (25-app §6). Tabs are Home · RSVP · Travel · Me until Camera and Photos (S7)
  * exist; the final guest tab set is an open product decision.
  */
 function GuestNavigator() {
@@ -114,6 +114,7 @@ function GuestNavigator() {
         {({ navigation }) => <GuestHomeScreen onRsvp={() => navigation.navigate('Rsvp')} />}
       </GuestTabs.Screen>
       <GuestTabs.Screen name="Rsvp" component={RsvpScreen} options={{ title: t('guestTabs.rsvp'), tabBarButtonTestID: 'gtab-rsvp' }} />
+      <GuestTabs.Screen name="Travel" component={TravelScreen} options={{ title: t('guestTabs.travel'), tabBarButtonTestID: 'gtab-travel' }} />
       <GuestTabs.Screen name="Me" component={GuestMeScreen} options={{ title: t('guestTabs.me'), tabBarButtonTestID: 'gtab-me' }} />
     </GuestTabs.Navigator>
   );

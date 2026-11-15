@@ -120,6 +120,18 @@ export async function seed(prisma: PrismaClient, log: (line: string) => void = (
     created.push({ id: ev.id, familyOnly: e.familyOnly });
   }
 
+  // Travel points (TRV-01): where guests arrive.
+  const [udr, udz] = await Promise.all([
+    prisma.travel_points.create({ data: { wedding_id: wedding.id, kind: 'airport', name: 'Udaipur Airport (UDR)', code: 'UDR', sort_order: 0, transfer_minutes: 40 } }),
+    prisma.travel_points.create({ data: { wedding_id: wedding.id, kind: 'station', name: 'Udaipur City Station (UDZ)', code: 'UDZ', sort_order: 1, transfer_minutes: 20 } }),
+  ]);
+  const FLIGHTS = [
+    { no: '6E2134', from: 'Delhi', at: '2027-02-11T10:40' },
+    { no: 'AI471', from: 'Mumbai', at: '2027-02-11T13:15' },
+    { no: '6E5312', from: 'Bengaluru', at: '2027-02-11T16:50' },
+    { no: 'UK617', from: 'Delhi', at: '2027-02-12T08:25' },
+  ];
+
   const links: string[] = [];
   for (let p = 0; p < 40; p++) {
     const last = LAST[p % LAST.length]!;
@@ -166,6 +178,29 @@ export async function seed(prisma: PrismaClient, log: (line: string) => void = (
       }
       const diets = ['veg', 'jain', 'non_veg', 'veg', 'eggetarian'] as const;
       await prisma.guest_dietary.createMany({ data: members.map((m, i) => ({ guest_id: m.id, wedding_id: wedding.id, diet: diets[(p + i) % diets.length]!, allergies: (p + i) % 6 === 0 ? ['nuts'] : [] })) });
+    }
+    // Demo journeys (TRV-01/03): out-station families from 12 on share one flight or train.
+    if (party.is_outstation && p >= 12 && p < 34) {
+      const members = await prisma.guests.findMany({ where: { party_id: party.id }, select: { id: true } });
+      const f = FLIGHTS[p % FLIGHTS.length]!;
+      const byTrain = p % 5 === 0;
+      const leg = await prisma.travel_legs.create({
+        data: {
+          wedding_id: wedding.id,
+          party_id: party.id,
+          direction: 'arrival',
+          mode: byTrain ? 'train' : 'flight',
+          carrier_code: byTrain ? null : f.no.slice(0, 2),
+          service_number: byTrain ? '12963' : f.no,
+          origin_city: f.from,
+          point_id: byTrain ? udz.id : udr.id,
+          scheduled_at: ist(byTrain ? '2027-02-11T06:15' : f.at),
+          needs_pickup: p % 4 !== 0,
+          created_by_guest_id: members[0]!.id,
+        },
+      });
+      await prisma.travel_leg_guests.createMany({ data: members.map((m) => ({ leg_id: leg.id, wedding_id: wedding.id, direction: 'arrival', guest_id: m.id })) });
+      await prisma.travel_party_state.create({ data: { party_id: party.id, wedding_id: wedding.id, status: 'submitted', submitted_at: new Date() } });
     }
     if (p < 5) links.push(`  ${party.label.padEnd(18)} /g/${token}`);
   }

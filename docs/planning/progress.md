@@ -97,7 +97,7 @@ Tracked by the Ralph loop (`.claude/ralph/PROMPT.md`). Status: `todo`, `doing`, 
 
 | Story | Title | Pts | Status | Note |
 | --- | --- | --- | --- | --- |
-| TRV-01 | Guest travel form | 6 | todo | |
+| TRV-01 | Guest travel form | 6 | done | Migration 0005 (08-trv tables). TravelService: legs shared by some/all members, one arrival + one departure per person (DB + 409), flight number normalisation, date range check, active points only, party state pending/partial/submitted/not_travelling, If-Match versioning between guest and host (409 conflict, 428 missing), audit. Guest /v1/guest/travel CRUD + not-travelling; host travel-points CRUD (desk read-only, in-use points hidden not deleted) and host legs on behalf. App: Travel tab with journey cards, arrival/departure form (mode, number, city, point, day chips, time, members, pickup). Seed: 2 points + demo journeys. Not here: lite-web form (with ACC-02b, S7), tickets (TRV-02). Screens trv-01..03. |
 | TRV-03 | Host travel view | 5 | todo | |
 | ARR-05 | Realtime infrastructure | 2 | todo | |
 | ARR-01 | Guest travel status | 5 | todo | |

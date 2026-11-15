@@ -296,6 +296,48 @@ if (want('msg-')) {
   }
 }
 
+if (want('trv-')) {
+  // TRV-01: a guest adds the family's flight in the Travel tab.
+  const api = 'http://localhost:4000';
+  const host = await (await fetch(`${api}/v1/auth/google`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idToken: 'dev:owner@mehfil.local', deviceId: 'shots-device-0000000002' }) })).json();
+  const auth = { Authorization: `Bearer ${host.accessToken}` };
+  const wid = host.user.weddings[0].id;
+  const parties = (await (await fetch(`${api}/v1/weddings/${wid}/parties?limit=200`, { headers: auth })).json()).items;
+  const travelling = new Set((await (await fetch(`${api}/v1/weddings/${wid}/travel/legs`, { headers: auth })).json()).items.map((l) => l.partyId));
+  const fam = parties.filter((p) => p.members.length >= 3 && p.members[0].phoneStatus === 'valid' && !travelling.has(p.id));
+  const party = fam[Math.floor(Date.now() / 60000) % fam.length];
+  const { url } = await (await fetch(`${api}/v1/weddings/${wid}/parties/${party.id}/link`, { headers: auth })).json();
+  for (const scheme of ['light', 'dark']) {
+    const ctx = await browser.newContext({ ...device, colorScheme: scheme });
+    const page = await ctx.newPage();
+    page.on('pageerror', (e) => console.error('pageerror:', e.message));
+    await page.goto(`${BASE}/g/${url.split('/').pop()}`, { waitUntil: 'networkidle' });
+    await page.getByTestId(`pick-${party.members[0].fullName.split(' ')[0]}`).click();
+    await page.getByTestId('otp-code').fill('000000');
+    await page.getByTestId('otp-verify').click();
+    await page.getByTestId('screen-consent').or(page.getByTestId('screen-guest-home')).first().waitFor();
+    if (await page.getByTestId('consent-accept').isVisible()) await page.getByTestId('consent-accept').click();
+    await page.getByTestId('gtab-travel').click();
+    await page.getByTestId('screen-travel').waitFor();
+    await page.waitForTimeout(600);
+    if (scheme === 'light') await shot(page, 'trv-01-empty');
+    if (await page.getByTestId('trv-add-arrival').isVisible()) {
+      await page.getByTestId('trv-add-arrival').click();
+      await page.getByTestId('trv-number').fill('6E 2134');
+      await page.getByTestId('trv-city').fill('Delhi');
+      await page.getByTestId('trv-day-2027-02-11').click();
+      await page.getByTestId('trv-time').fill('10:40');
+      await page.waitForTimeout(400);
+      await shot(page, `trv-02-form-${scheme}`);
+      await page.getByTestId('trv-save').click();
+    }
+    await page.getByTestId('screen-travel').waitFor();
+    await page.waitForTimeout(1000);
+    await shot(page, `trv-03-saved-${scheme}`);
+    await ctx.close();
+  }
+}
+
 if (want('hc-')) {
   // RSV-03: live headcount from Host home.
   for (const scheme of ['light', 'dark']) {

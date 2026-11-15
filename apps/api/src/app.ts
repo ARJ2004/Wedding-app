@@ -26,6 +26,7 @@ import { opsRoutes } from './modules/ops';
 import { orgRoutes } from './modules/team';
 import { weddingRoutes } from './modules/weddings';
 import { realtimeRoutes } from './modules/realtime';
+import { TravelService, travelRoutes } from './modules/travel';
 import { wireOtp, wireReplies } from './wiring';
 import { createWhatsAppProvider, FanoutService, MessageStats, messageRoutes, messagingRoutes, ReplyRouter, webhookRouter } from './modules/messaging';
 import { PgListener, prismaRtStore, RealtimeHub } from './common/sse';
@@ -105,6 +106,7 @@ export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = 
   const rsvp = new RsvpService(deps.prisma);
   rsvpRoutes(ctx, rsvp);
   headcountRoutes(ctx, deps.prisma);
+  travelRoutes(ctx, new TravelService(deps.prisma));
   guestHomeRoutes(ctx, { prisma: deps.prisma, objectStore: deps.objectStore, rsvp });
   const media = new MediaService(deps);
   mediaRoutes(ctx, media);

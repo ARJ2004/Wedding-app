@@ -155,6 +155,9 @@ model guests {
   refresh_tokens                                                        refresh_tokens[]
   rsvps_rsvps_guest_idToguests                                          rsvps[]                      @relation("rsvps_guest_idToguests")
   rsvps_rsvps_responded_by_guest_idToguests                             rsvps[]                      @relation("rsvps_responded_by_guest_idToguests")
+  ticket_extractions                                                    ticket_extractions[]
+  travel_leg_guests                                                     travel_leg_guests[]
+  travel_legs                                                           travel_legs[]
 
   @@index([full_name(ops: raw("gin_trgm_ops"))], map: "guests_name_trgm_idx", type: Gin)
   @@index([party_id], map: "guests_party_idx")
@@ -182,25 +185,27 @@ model idempotency_keys {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model media_objects {
-  id                                              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  wedding_id                                      String        @db.Uuid
+  id                                              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wedding_id                                      String              @db.Uuid
   kind                                            String
   s3_bucket                                       String
-  s3_key                                          String        @unique
+  s3_key                                          String              @unique
   content_type                                    String
   byte_size                                       BigInt?
   sha256                                          Bytes?
-  status                                          String        @default("pending")
-  uploaded_by_guest_id                            String?       @db.Uuid
-  uploaded_by_user_id                             String?       @db.Uuid
-  delete_after                                    DateTime?     @db.Timestamptz(6)
-  created_at                                      DateTime      @default(now()) @db.Timestamptz(6)
+  status                                          String              @default("pending")
+  uploaded_by_guest_id                            String?             @db.Uuid
+  uploaded_by_user_id                             String?             @db.Uuid
+  delete_after                                    DateTime?           @db.Timestamptz(6)
+  created_at                                      DateTime            @default(now()) @db.Timestamptz(6)
   import_jobs                                     import_jobs[]
-  guests                                          guests?       @relation(fields: [uploaded_by_guest_id], references: [id], onUpdate: NoAction)
-  users                                           users?        @relation(fields: [uploaded_by_user_id], references: [id], onUpdate: NoAction)
-  weddings                                        weddings      @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  guests                                          guests?             @relation(fields: [uploaded_by_guest_id], references: [id], onUpdate: NoAction)
+  users                                           users?              @relation(fields: [uploaded_by_user_id], references: [id], onUpdate: NoAction)
+  weddings                                        weddings            @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   messages                                        messages[]
-  weddings_weddings_cover_media_idTomedia_objects weddings[]    @relation("weddings_cover_media_idTomedia_objects")
+  ticket_extractions                              ticket_extractions?
+  travel_legs                                     travel_legs[]
+  weddings_weddings_cover_media_idTomedia_objects weddings[]          @relation("weddings_cover_media_idTomedia_objects")
 
   @@index([wedding_id, kind, created_at(sort: Desc)], map: "media_wedding_kind_idx")
 }
@@ -265,6 +270,9 @@ model parties {
   party_auth_state     party_auth_state?
   party_groups         party_groups[]
   rsvps                rsvps[]
+  ticket_extractions   ticket_extractions[]
+  travel_legs          travel_legs[]
+  travel_party_state   travel_party_state?
 
   @@index([label(ops: raw("gin_trgm_ops"))], map: "parties_label_trgm_idx", type: Gin)
 }
@@ -357,6 +365,8 @@ model users {
   rsvps                                                rsvps[]
   team_invitations_team_invitations_accepted_byTousers team_invitations[]           @relation("team_invitations_accepted_byTousers")
   team_invitations_team_invitations_invited_byTousers  team_invitations[]           @relation("team_invitations_invited_byTousers")
+  ticket_extractions                                   ticket_extractions[]
+  travel_legs                                          travel_legs[]
   user_policy_acceptances                              user_policy_acceptances[]
   wedding_members_wedding_members_invited_byTousers    wedding_members[]            @relation("wedding_members_invited_byTousers")
   wedding_members_wedding_members_user_idTousers       wedding_members[]            @relation("wedding_members_user_idTousers")
@@ -451,6 +461,10 @@ model weddings {
   rsvp_chase_runs                                      rsvp_chase_runs[]
   rsvps                                                rsvps[]
   team_invitations                                     team_invitations[]
+  ticket_extractions                                   ticket_extractions[]
+  travel_legs                                          travel_legs[]
+  travel_party_state                                   travel_party_state[]
+  travel_points                                        travel_points[]
   venues                                               venues[]
   wedding_contacts                                     wedding_contacts[]
   wedding_members                                      wedding_members[]
@@ -1024,4 +1038,134 @@ model messaging_webhook_events {
   weddings           weddings?           @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([provider, kind, external_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model flight_status_cache {
+  carrier_code      String
+  flight_number     String
+  flight_date       DateTime  @db.Date
+  status            String
+  arrival_iata      String?
+  arrival_terminal  String?
+  scheduled_arrival DateTime? @db.Timestamptz(6)
+  estimated_arrival DateTime? @db.Timestamptz(6)
+  actual_arrival    DateTime? @db.Timestamptz(6)
+  provider          String
+  fetched_at        DateTime  @default(now()) @db.Timestamptz(6)
+  next_poll_at      DateTime? @db.Timestamptz(6)
+
+  @@id([carrier_code, flight_number, flight_date])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ticket_extractions {
+  id                    String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wedding_id            String        @db.Uuid
+  party_id              String        @db.Uuid
+  media_id              String        @unique @db.Uuid
+  requested_by_guest_id String?       @db.Uuid
+  requested_by_user_id  String?       @db.Uuid
+  status                String        @default("queued")
+  provider              String
+  model                 String?
+  result                Json?
+  error_code            String?
+  applied_leg_id        String?       @db.Uuid
+  created_at            DateTime      @default(now()) @db.Timestamptz(6)
+  completed_at          DateTime?     @db.Timestamptz(6)
+  travel_legs           travel_legs?  @relation(fields: [applied_leg_id], references: [id], onUpdate: NoAction)
+  media_objects         media_objects @relation(fields: [media_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  parties               parties       @relation(fields: [party_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  guests                guests?       @relation(fields: [requested_by_guest_id], references: [id], onUpdate: NoAction)
+  users                 users?        @relation(fields: [requested_by_user_id], references: [id], onUpdate: NoAction)
+  weddings              weddings      @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([party_id, created_at(sort: Desc)], map: "ticket_extractions_party_idx")
+}
+
+model travel_leg_guests {
+  leg_id      String      @db.Uuid
+  wedding_id  String      @db.Uuid
+  direction   String
+  guest_id    String      @db.Uuid
+  guests      guests      @relation(fields: [guest_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  travel_legs travel_legs @relation(fields: [leg_id, wedding_id, direction], references: [id, wedding_id, direction], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([leg_id, guest_id])
+  @@unique([guest_id, direction])
+  @@index([wedding_id, direction], map: "travel_leg_guests_wedding_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model travel_legs {
+  id                       String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wedding_id               String               @db.Uuid
+  party_id                 String               @db.Uuid
+  direction                String
+  mode                     String
+  carrier_code             String?
+  service_number           String?
+  origin_city              String?
+  point_id                 String?              @db.Uuid
+  scheduled_at             DateTime             @db.Timestamptz(6)
+  needs_pickup             Boolean              @default(false)
+  notes                    String?
+  ticket_media_id          String?              @db.Uuid
+  source                   String               @default("guest")
+  estimated_at             DateTime?            @db.Timestamptz(6)
+  flight_status            String?
+  flight_status_checked_at DateTime?            @db.Timestamptz(6)
+  version                  Int                  @default(1)
+  created_by_guest_id      String?              @db.Uuid
+  created_by_user_id       String?              @db.Uuid
+  created_at               DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime             @default(now()) @db.Timestamptz(6)
+  ticket_extractions       ticket_extractions[]
+  travel_leg_guests        travel_leg_guests[]
+  guests                   guests?              @relation(fields: [created_by_guest_id], references: [id], onUpdate: NoAction)
+  users                    users?               @relation(fields: [created_by_user_id], references: [id], onUpdate: NoAction)
+  parties                  parties              @relation(fields: [party_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  travel_points            travel_points?       @relation(fields: [point_id], references: [id], onUpdate: NoAction)
+  media_objects            media_objects?       @relation(fields: [ticket_media_id], references: [id], onUpdate: NoAction)
+  weddings                 weddings             @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([id, wedding_id, direction])
+  @@index([party_id], map: "travel_legs_party_idx")
+  @@index([wedding_id, direction, scheduled_at], map: "travel_legs_sched_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model travel_party_state {
+  party_id       String    @id @db.Uuid
+  wedding_id     String    @db.Uuid
+  status         String    @default("pending")
+  submitted_at   DateTime? @db.Timestamptz(6)
+  last_chased_at DateTime? @db.Timestamptz(6)
+  chase_count    Int       @default(0)
+  updated_at     DateTime  @default(now()) @db.Timestamptz(6)
+  parties        parties   @relation(fields: [party_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  weddings       weddings  @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([wedding_id, status, last_chased_at], map: "travel_party_state_chase_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model travel_points {
+  id                    String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wedding_id            String        @db.Uuid
+  kind                  String
+  name                  String
+  code                  String?
+  lat                   Float?
+  lng                   Float?
+  pickup_buffer_minutes Int           @default(30)
+  transfer_minutes      Int           @default(45)
+  is_active             Boolean       @default(true)
+  sort_order            Int           @default(0)
+  created_at            DateTime      @default(now()) @db.Timestamptz(6)
+  travel_legs           travel_legs[]
+  weddings              weddings      @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([wedding_id, name])
 }
