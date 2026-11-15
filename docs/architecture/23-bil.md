@@ -37,11 +37,10 @@ Lets Mehfil charge the PRD prices: **Free** (25 guests, 10 shots per guest), **E
 
 ## 3. Data model
 
-DDL: [`sql/23-bil.sql`](./sql/23-bil.sql). References `000-core.sql` only. **Schema check passed**: `scripts/check-schema.sh arch_bil 000-core.sql 18-pln.sql 23-bil.sql 24-gtm.sql` → `OK: 43 tables`; `23-bil.sql` alone on core also passes. Also applied in sequence after every other epic file present up to 24 (excluding `14-prv.sql`, which currently clashes with `05-acc.sql` — not ours). EXPLAIN on 300 orgs × 5 lots: "pick lot to consume" uses `credit_lots_available_idx` (0.05 ms).
+DDL: [`sql/23-bil.sql`](./sql/23-bil.sql). References `000-core.sql` (and reuses `platform_staff` from `14-prv.sql` in code; no FK). **Schema check passed**: `scripts/check-schema.sh arch_bil 000-core.sql 14-prv.sql 18-pln.sql 23-bil.sql 24-gtm.sql` → OK (see report). Also applied in sequence after every other epic file present up to 24. EXPLAIN on 300 orgs × 5 lots: "pick lot to consume" uses `credit_lots_available_idx` (0.05 ms).
 
 | Table | Purpose | Notes |
 | --- | --- | --- |
-| `platform_admins` | Mehfil staff who can comp plans/credits, refund, override limits | Granted only by an ops script. |
 | `billing_products` | Catalogue: `plan`, `credit_pack`, `addon`; price (paise), `tax_inclusive`, `gst_rate_bp`, `sac_code`, `credits`, `credit_valid_days`, `entitlements` jsonb | Immutable SKUs; one active SKU per plan code. Seed values are **placeholders** (§13). |
 | `billing_profiles` | Per org: legal name, optional GSTIN (regex + state prefix check), GST state code, address, invoice email | Required before the first order; snapshotted into the order. |
 | `billing_orders` | One checkout: org, optional wedding, status, provider + `provider_order_id`, subtotal/tax/total, `supply_type` intra/inter, billing snapshot, `(created_by, idempotency_key)` unique, `expires_at` 30 min | `wedding_id ON DELETE SET NULL` — money records outlive weddings. |
@@ -91,9 +90,9 @@ Host endpoints use the host JWT; `/account/*` pages use the cookie session; webh
 | POST | `/v1/billing/orders/:id/verify` | order creator | Verify checkout signature, fulfil | `BIL_SIGNATURE_INVALID`, `BIL_PAYMENT_NOT_CAPTURED` |
 | GET | `/v1/billing/orders/:id` | order creator, org admins | Status polling | — |
 | POST | `/v1/billing/webhooks/razorpay` | Razorpay | Raw-body HMAC verify → store → enqueue | 400 on bad signature (logged, alerted on spikes) |
-| POST | `/v1/admin/billing/comp` | platform admin | Comp a plan to a wedding or credits to an org (pilots) | — |
-| PUT | `/v1/admin/weddings/:wid/entitlement-overrides` | platform admin | Override limits (audited) | — |
-| POST | `/v1/admin/billing/orders/:id/refund` | platform admin | Razorpay refund + credit note + optional entitlement/credit reversal | `BIL_CREDIT_ALREADY_USED` |
+| POST | `/v1/admin/billing/comp` | platform staff (`admin`) | Comp a plan to a wedding or credits to an org (pilots) | — |
+| PUT | `/v1/admin/weddings/:wid/entitlement-overrides` | platform staff (`admin`) | Override limits (audited) | — |
+| POST | `/v1/admin/billing/orders/:id/refund` | platform staff (`admin`) | Razorpay refund + credit note + optional entitlement/credit reversal | `BIL_CREDIT_ALREADY_USED` |
 
 **Server-rendered pages** (`/account`, HTML, CSP-locked): `GET /account` (sign in with Google) · `POST /account/session` · `POST /account/logout` · `GET /account/checkout?sku=&wedding=` (choose wedding or "activate later", billing details) · `POST /account/checkout` (creates order via the same service, renders Razorpay Checkout) · `POST /account/checkout/:orderId/complete` (verify) · `GET /account/orders/:id` (receipt + invoice link) · `GET /account/billing` (credits, invoices). Pages are English-only in v1, large-text friendly, < 30 KB HTML+CSS, no SPA.
 
@@ -244,6 +243,6 @@ Billing volume is tiny (hundreds of orders per month in season). The stressed pa
 1. **Host-facing server-rendered web pages** at `/account/*` (billing, checkout) with **Google Identity Services** sign-in and **cookie sessions** (`web_sessions`). Baseline only has the guest lite web at `/g/:token` and JWTs. Needed because checkout cannot live in the app.
 2. **New external service: transactional email** (Amazon SES ap-south-1) behind `EmailProvider`, with a log-sink fake. Used for invoices, credit-expiry warnings, upgrade nudges, lead notifications (GTM).
 3. **`weddings.plan` is written only by the billing module**; everyone else reads `entitlements`.
-4. **`platform_admins`** table for Mehfil staff operations (no staff role exists in the baseline).
+4. Staff operations (comp, overrides, refunds) reuse **`platform_staff`** from PRV (`14-prv.sql`, `staff_role = 'admin'`); no billing-specific staff table.
 5. Baseline API conventions don't name a status for plan limits: this design uses **402** with `BIL_LIMIT_REACHED` / `BIL_FEATURE_NOT_IN_PLAN`.
 6. Overview "Decisions that change the PRD" should record: *no in-app purchases; checkout on the web*.

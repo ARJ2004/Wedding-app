@@ -1,16 +1,11 @@
 -- E23 Billing and plans (BIL). Design: docs/architecture/23-bil.md
--- References 000-core.sql only. Owning module: apps/api/src/modules/billing.
+-- References 000-core.sql and 14-prv.sql (platform_staff, read only in services). Owning module: apps/api/src/modules/billing.
 -- Money is integer paise (bigint). GST rates are basis points (1800 = 18%).
 -- Billing records outlive weddings (GST: keep 8 years), so FKs to weddings on money tables are
 -- ON DELETE SET NULL; per-wedding state tables cascade.
 
--- ── Platform admins (comp grants for pilots, refunds, catalogue changes) ──────
--- Granted only by an ops script, never through the API.
-CREATE TABLE platform_admins (
-  user_id     uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-  granted_by  text NOT NULL,                       -- operator name from the ops script
-  created_at  timestamptz NOT NULL DEFAULT now()
-);
+-- Platform staff: reuses platform_staff from 14-prv.sql (staff_role = 'admin' may comp plans/credits,
+-- override limits and refund). No billing-specific staff table.
 
 -- ── Catalogue ─────────────────────────────────────────────────────────────────
 -- Immutable once sold: a price or entitlement change is a new sku (…_v2) and the old one is

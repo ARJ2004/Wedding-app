@@ -46,7 +46,9 @@ SQL: [`sql/10-rol.sql`](./sql/10-rol.sql). **Schema check passed** (`arch_rol`: 
 
 Retention: invitations deleted 90 days after expiry/accept/revoke (cron). Audit rows live as long as the wedding and are deleted with it by the PRV purge (cascade under the maintenance flag); guest deletion (PRV-02) redacts `before/after` of that guest's rows.
 
-## 4. Permission matrix
+## 4. API
+### 4.1 Permission matrix
+
 
 Roles: `owner`, `co_host`, `planner_member` (incl. implicit org admins), `desk_staff`, `guest` (guest JWT, scoped to own party). ✓ = allowed, — = denied, *own* = only own party/self.
 
@@ -85,7 +87,7 @@ Roles: `owner`, `co_host`, `planner_member` (incl. implicit org admins), `desk_s
 
 Org-level (`organization_members.org_role`): `org.manage_seats`, `org.update` → `org_owner`, `org_admin`; `org.read` → all; only `org_owner` can delete the org or change `org_admin`s.
 
-### `packages/domain/src/permissions.ts` (shape)
+#### `packages/domain/src/permissions.ts` (shape)
 
 ```ts
 export const WEDDING_ROLES = ['owner', 'co_host', 'planner_member', 'desk_staff'] as const;
@@ -132,7 +134,8 @@ export const canAssign = (actor: WeddingRole, target: WeddingRole) => ASSIGNABLE
 
 `idv.view` for `planner_member` is gated by an owner toggle (`ctx.weddingFlags`), evaluated by `canInWedding(ctx, action)`, which wraps `can()`. Guest actions are additionally scoped by `party_id` from the guest JWT in each service.
 
-## 5. API
+### 4.2 Endpoints
+
 
 | Method | Path | Caller (permission) | Purpose | Notable errors |
 | --- | --- | --- | --- | --- |
@@ -154,7 +157,7 @@ export const canAssign = (actor: WeddingRole, target: WeddingRole) => ASSIGNABLE
 
 Middleware chain per wedding route: `authHost` (JWT `aud=host`) → `loadMembership(wid)` (explicit row, else org admin of `weddings.organization_id` → `planner_member`, else **404**) → `requirePermission(action)` (403) → handler. Guest routes: `authGuest` → `ctx.guest = {guestId, partyId, weddingId}`; services filter by `party_id`.
 
-### Examples
+#### Examples
 
 `POST /v1/weddings/:wid/invitations`
 ```json
@@ -177,14 +180,16 @@ Middleware chain per wedding route: `authHost` (JWT `aud=host`) → `loadMembers
 
 Error for a member without permission: `403 { "error": { "code": "ROL_FORBIDDEN", "message": "Your role (desk_staff) can't do guest.export." } }`.
 
-## 6. Serialisers and masking
+### 4.3 Serialisers and masking
+
 
 - Each resource defines output schemas per audience in `modules/<x>/schemas.ts`, e.g. `GuestOutFull`, `GuestOutDesk`, `GuestOutSelf`. `serialize(ctx, 'guest', row)` picks by `canInWedding(ctx, 'guest.contact.read')` and runs `schema.strip().parse(row)`.
 - Desk staff schemas never include: `phone`, `altPhone`, `email`, `notes`, `relation`, `phoneRaw`, ID-vault fields, ticket media, announcement bodies. The "call" action in ARR-04 is therefore host-only (ARR design must follow).
 - Guest schemas include only the guest's own party; other parties are never queried (service-level `party_id` filter), not just masked.
 - CSV exports use the same schemas (columns derived from the chosen schema).
 
-## 7. Audit log
+### 4.4 Audit log writer and viewer
+
 
 Writer API (`modules/audit/index.ts`):
 ```ts
@@ -197,7 +202,7 @@ audit.record(tx, { weddingId, action: 'guest.update', entityType: 'guest', entit
 - Viewer filters map to the four indexes; free-text search not supported (by design).
 - Redaction (PRV-02): `UPDATE audit_log SET before = '{"redacted":true}', after = ..., actor_label = ..., redacted_at = now()` under `SET LOCAL mehfil.audit_maintenance='on'`.
 
-## 8. Jobs, events and realtime
+## 5. Jobs, events and realtime
 
 | Kind | Name | Notes |
 | --- | --- | --- |
@@ -207,7 +212,7 @@ audit.record(tx, { weddingId, action: 'guest.update', entityType: 'guest', entit
 | On sign-in | — | `/v1/me` returns pending invitations for the verified email (no job). |
 | SSE | When a member is removed, the SSE hub closes their open streams for that wedding (`LISTEN` on `membership_changed`). | Desk tablets lose the arrivals board immediately. |
 
-## 9. Mobile app
+## 6. Mobile app
 
 **Host mode** (`apps/mobile/src/features/team/`, `.../audit/`):
 
@@ -224,11 +229,11 @@ audit.record(tx, { weddingId, action: 'guest.update', entityType: 'guest', entit
 - Query keys: `['me']`, `['team', wid]`, `['audit', wid, filters]` (infinite), `['org', oid]`.
 - On 404 for a wedding (removed access), the app clears that wedding's cache and returns to `WeddingsHome` with a message.
 
-## 10. Guest lite web
+## 7. Guest lite web
 
 Not applicable: no team or audit features for guests. Guest-side permissions (own party only) are enforced by the same services the lite page calls.
 
-## 11. Security and privacy
+## 8. Security and privacy
 
 - Invite token: 128-bit random, base64url, only sha256 stored; single-use; 7-day expiry; rate limit 30 invites/day per wedding; accept endpoint 10/min per user.
 - Google email must be `email_verified=true`; dev bypass (`dev:<email>`) is only in non-production (baseline guard).
@@ -238,11 +243,11 @@ Not applicable: no team or audit features for guests. Guest-side permissions (ow
 - DPDP: the owner is the Data Fiduciary's contact for the wedding; planner orgs act as processors for family-owned weddings (PO/legal to confirm, §15).
 - Tenant isolation: every wedding-scoped query includes `wedding_id`; PRV-05 tenant-isolation tests reuse the matrix generator with an "outsider" member of another wedding.
 
-## 12. Scale and performance
+## 9. Scale and performance
 
 Membership lookup per request: PK `(wedding_id, user_id)` + org fallback via `organization_members` PK — sub-millisecond; cached per request only. Audit writes: one insert per mutation in the same transaction; at peak (check-in rush, ~10 writes/s per wedding, 50 weddings) far below Postgres limits. Audit viewer EXPLAIN on 210k rows: **0.13 ms** via `audit_wedding_entity_idx`. Audit table growth ~50k rows per 2,000-guest wedding; partitioning not needed before ~10M rows.
 
-## 13. Testing plan
+## 10. Testing plan
 
 | Level | What |
 | --- | --- |
@@ -256,7 +261,7 @@ Membership lookup per request: PK `(wedding_id, user_id)` + org fallback via `or
 
 Fakes: dev auth bypass (`dev:<email>`) creates principals; no external services.
 
-## 14. Story breakdown
+## 11. Story breakdown
 
 | Story | Tasks | Backlog → revised | Why |
 | --- | --- | --- | --- |
@@ -268,7 +273,7 @@ Fakes: dev auth bypass (`dev:<email>`) creates principals; no external services.
 | ROL-03b Audit viewer (S8) | [DB] viewer indexes · [API] viewer endpoints, redaction function for PRV-02 · [MOB] Activity screen · [TEST] | 3 → **3** | Unchanged. |
 | **Total** | | **14 → 19** | |
 
-## 15. Dependencies and sequencing
+## 12. Dependencies and sequencing
 
 | Needs | From | Note |
 | --- | --- | --- |
@@ -277,7 +282,7 @@ Fakes: dev auth bypass (`dev:<email>`) creates principals; no external services.
 | Push to notify invited/removed users | MSG-08 / push module | Optional; share sheet works without it. |
 | Consumers | Every epic | All endpoints use `route()` with an `Action`; new actions are added to `permissions.ts` in that epic's PR. ARR-04 "call" button is host-only. |
 
-## 16. Risks and open questions
+## 13. Risks and open questions
 
 | # | Item |
 | --- | --- |
@@ -289,7 +294,7 @@ Fakes: dev auth bypass (`dev:<email>`) creates principals; no external services.
 | Q3 | PO: may `planner_member` view decrypted IDs if the owner allows (default off)? |
 | Q4 | PO/legal: is the planner org a processor for the family (DPA in ToS)? |
 
-## 17. Deviations from the baseline
+## 14. Deviations from the baseline
 
 1. Baseline says field masking happens "in serialisers"; this design makes it concrete as **audience-specific Zod output schemas with `.strip()`** — compatible, noted for clarity.
 2. `audit_log` gains an append-only trigger with a session-flag escape hatch; the PRV retention purge and any test that hard-deletes a wedding must `SET LOCAL mehfil.audit_maintenance = 'on'` (TRUNCATE in tests is unaffected).
