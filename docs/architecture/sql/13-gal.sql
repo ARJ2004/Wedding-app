@@ -39,7 +39,7 @@ CREATE UNIQUE INDEX photo_favourites_user_uq  ON photo_favourites (user_id, wedd
 CREATE INDEX photo_favourites_photo_idx ON photo_favourites (photo_id);
 
 -- ── Album exports (GAL-02 host zip, GAL-04 optional guest zip) ───────────────
--- The zip itself is a media_objects row (kind 'export') under exports/{weddingId}/{exportId}.zip.
+-- The zip itself is a media_objects row (kind 'export') in the exports bucket: gallery/{weddingId}/{exportId}.zip.
 CREATE TABLE gallery_exports (
   id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   wedding_id           uuid NOT NULL REFERENCES weddings(id) ON DELETE CASCADE,

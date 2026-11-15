@@ -26,7 +26,7 @@ CREATE TABLE photo_event_settings (
 CREATE INDEX photo_event_settings_wedding_idx ON photo_event_settings (wedding_id);
 
 -- ── Shot counters (server-side limit, atomic upsert) ─────────────────────────
--- One row per guest × scope × source. event_id is NULL when shot_limit_scope = 'wedding'
+-- One row per guest × scope × source. event_id is NULL when settings.camera.limitScope = 'wedding'
 -- and always NULL for source = 'gallery' (gallery uploads are per wedding).
 -- Reserve: INSERT ... ON CONFLICT DO UPDATE SET used = used + 1 WHERE used < :limit RETURNING used.
 CREATE TABLE photo_shot_counters (
@@ -58,8 +58,8 @@ CREATE TABLE photos (
   reveal_at         timestamptz NOT NULL DEFAULT '-infinity',                -- copied from photo_event_settings; bulk-updated on change
   width             int,
   height            int,
-  preview_key       text,                                                    -- w/{wid}/p/{id}/pv.webp
-  thumb_key         text,                                                    -- w/{wid}/p/{id}/th.webp
+  preview_key       text,                                                    -- weddings/{wid}/photos/{id}/pv.webp
+  thumb_key         text,                                                    -- weddings/{wid}/photos/{id}/th.webp
   blurhash          text,
   ready_at          timestamptz,                                             -- set by media.process_photo; null = not yet viewable
   hidden_at         timestamptz,
