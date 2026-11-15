@@ -1,0 +1,22 @@
+{
+  "common.retry": "Try again",
+  "common.offline": "You are offline. We will send this when you are back online.",
+  "common.loading": "Loading…",
+  "common.error.generic": "Something went wrong. Please try again.",
+  "common.save": "Save",
+  "common.cancel": "Cancel",
+  "guest.home.title": "{coupleNames}",
+  "guest.home.eventsCount": "{count, plural, one {# event} other {# events}} for you",
+  "guest.schedule.startsAt": "Starts {time}",
+  "guest.schedule.dressCode": "Dress code: {dressCode}",
+  "guest.rsvp.attending": "Attending",
+  "guest.rsvp.notAttending": "Not attending",
+  "guest.rsvp.maybe": "Maybe",
+  "guest.travel.landed": "I've landed",
+  "guest.travel.atHotel": "At the hotel",
+  "guest.travel.runningLate": "Running late by {minutes, plural, one {# minute} other {# minutes}}",
+  "guest.otp.sent": "We sent a 6-digit code to {maskedPhone}",
+  "host.signIn.google": "Sign in with Google",
+  "host.signIn.dev": "Dev sign-in (development builds only)",
+  "push.announcement.title": "Update from {weddingTitle}"
+}

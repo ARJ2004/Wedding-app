@@ -1,7 +1,8 @@
 import request from 'supertest';
-import { boot, closePool } from './helpers';
+import type { PrismaClient } from '@prisma/client';
+import { boot, closePrisma } from './helpers';
 
-afterAll(closePool);
+afterAll(closePrisma);
 
 describe('health', () => {
   it('GET /v1/health is public and returns the version', async () => {
@@ -15,7 +16,8 @@ describe('health', () => {
   });
 
   it('GET /v1/health/ready returns 503 NOT_READY when the database fails', async () => {
-    const app = boot({ db: { query: () => Promise.reject(new Error('connection refused')) } });
+    const prisma = { $queryRaw: () => Promise.reject(new Error('connection refused')) } as unknown as PrismaClient;
+    const app = boot({ prisma });
     const res = await request(app).get('/v1/health/ready').expect(503);
     expect(res.body).toEqual({ error: { code: 'NOT_READY', message: 'Database is not reachable' } });
   });

@@ -17,13 +17,13 @@ Tracked by the Ralph loop (`.claude/ralph/PROMPT.md`). Status: `todo`, `doing`, 
 
 | Story | Title | Pts | Status | Note |
 | --- | --- | --- | --- | --- |
-| FND-04 | Core data model + migrations | 3 | todo | |
-| FND-06 | Background workers | 3 | todo | |
-| FND-09 | i18n framework | 3 | todo | |
-| FND-10 | Shared design system | 5 | todo | |
-| FND-13 | (new) ObjectStore | 2 | todo | |
-| FND-12b | Idempotency middleware + table (moved from FND-12) | 1 | todo | |
-| FND-15 | (new) Dev seed and demo wedding | 1 | todo | |
+| FND-04 | Core data model + migrations | 3 | done | prisma/migrations/0001_init from 000-core + 01-fnd DDL; schema.prisma pulled (snake_case models); prisma:drift check in CI (no drift); test DB rebuilt from migrations per e2e run. |
+| FND-06 | Background workers | 3 | done | pg-boss 10: JobQueue/defineJob, 4 lanes, per-job DLQ, Zod payload guard, FND purge crons, InlineJobQueue fake; worker boots. /v1/ops/jobs endpoints split to FND-06b (needs host auth). |
+| FND-09 | i18n framework | 3 | done | packages/i18n: FormatJS ICU, en catalogue (hi/kn empty), English fallback, wedding-timezone formatting, checkCatalogs() run in tests/CI. RN IntlProvider + Hermes polyfill land with APP-01. |
+| FND-10 | Shared design system | 5 | done | Split. FND-10a done: packages/design-tokens (light/dark, large text, high contrast, Indic line heights, WCAG tests, lite-web CSS vars). RN theme provider + ui/ components = FND-10b with APP-01. |
+| FND-13 | (new) ObjectStore | 2 | done | ObjectStore port: S3ObjectStore (S3 + MinIO path-style), FakeObjectStore with simulateUpload; presign tests offline. CloudFront signer moves to CAM-07. |
+| FND-12b | Idempotency middleware + table (moved from FND-12) | 1 | done | idempotent() middleware on idempotency_keys: replay, 409 concurrent, 422 different body, per-caller scope, 5xx retryable; e2e on Postgres. |
+| FND-15 | (new) Dev seed and demo wedding | 1 | done | scripts/seed-dev.ts + pnpm db:seed / db:reset (local only): 4 dev users by role, planner org, demo wedding, 6 events, 40 parties, sample /g/ links. |
 
 ## S2 · 14 – 27 Dec 2026 · A host signs in and creates a wedding
 
@@ -41,6 +41,8 @@ Tracked by the Ralph loop (`.claude/ralph/PROMPT.md`). Status: `todo`, `doing`, 
 | SET-03a | Venues + pasted map link | 3 | todo | |
 | GST-01 | Add/edit guests in parties | 5 | todo | |
 | GST-04 | Phone normalisation | 2 | todo | |
+| FND-06b | Ops job endpoints (/v1/ops/jobs, retry) — split from FND-06 | 1 | todo | |
+| FND-10b | RN theme provider + ui/ components — split from FND-10 | 3 | todo | needs APP-01 project |
 
 ## S3 · 28 Dec 2026 – 10 Jan 2027 · Real guest lists (holiday sprint)
 

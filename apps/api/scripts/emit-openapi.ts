@@ -1,6 +1,9 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type { PrismaClient } from '@prisma/client';
 import pino from 'pino';
+import { InlineJobQueue } from '../src/common/jobs';
+import { FakeObjectStore } from '../src/common/object-store';
 import { createApp } from '../src/app';
 import { loadConfig } from '../src/config/env';
 
@@ -14,7 +17,9 @@ const config = loadConfig({
 const { openApiDocument } = createApp({
   config,
   logger: pino({ level: 'silent' }),
-  db: { query: async () => undefined },
+  prisma: {} as PrismaClient,
+  objectStore: new FakeObjectStore(),
+  jobs: new InlineJobQueue(),
 });
 const out = join(__dirname, '../../../packages/api-client/openapi.json');
 writeFileSync(out, `${JSON.stringify(openApiDocument, null, 2)}\n`);

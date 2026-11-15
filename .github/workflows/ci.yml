@@ -52,6 +52,13 @@ jobs:
           PGUSER: mehfil
           PGPASSWORD: mehfil
         run: scripts/check-schema.sh mehfil_schema_check
+      - name: Prisma schema matches the migrations
+        env:
+          SHADOW_DATABASE_URL: postgresql://mehfil:mehfil@localhost:5432/mehfil_shadow
+          PGPASSWORD: mehfil
+        run: |
+          createdb -h localhost -U mehfil mehfil_shadow
+          pnpm --filter @mehfil/api run prisma:drift
       - name: API end-to-end tests
         run: pnpm run test:e2e
       - name: API client is up to date with the API

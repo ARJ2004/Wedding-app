@@ -1,24 +1,42 @@
-import { Pool } from 'pg';
+import { PrismaClient } from '@prisma/client';
 import pino from 'pino';
 import { createApp } from '../src/app';
 import { loadConfig, type AppConfig } from '../src/config/env';
-import type { Db, Deps } from '../src/deps';
+import { InlineJobQueue } from '../src/common/jobs';
+import { FakeObjectStore } from '../src/common/object-store';
+import type { Deps } from '../src/deps';
 
-let pool: Pool | undefined;
+let prisma: PrismaClient | undefined;
 
-export function testPool(): Pool {
-  pool ??= new Pool({ connectionString: process.env.DATABASE_URL, max: 4 });
-  return pool;
+export function testPrisma(): PrismaClient {
+  prisma ??= new PrismaClient({ datasourceUrl: process.env.DATABASE_URL });
+  return prisma;
 }
 
-export async function closePool(): Promise<void> {
-  await pool?.end();
-  pool = undefined;
+export async function closePrisma(): Promise<void> {
+  await prisma?.$disconnect();
+  prisma = undefined;
+}
+
+export const silentLogger = pino({ level: 'silent' });
+
+export function testDeps(overrides: Partial<Omit<Deps, 'config'>> & { config?: Partial<AppConfig> } = {}): Deps {
+  return {
+    config: { ...loadConfig(), ...overrides.config },
+    logger: silentLogger,
+    prisma: overrides.prisma ?? testPrisma(),
+    objectStore: overrides.objectStore ?? new FakeObjectStore(),
+    jobs: overrides.jobs ?? new InlineJobQueue(),
+  };
 }
 
 /** Boots the real app against mehfil_test; override any dependency or config value per test. */
-export function boot(overrides: { config?: Partial<AppConfig>; db?: Db } = {}) {
-  const config = { ...loadConfig(), ...overrides.config };
-  const deps: Deps = { config, logger: pino({ level: 'silent' }), db: overrides.db ?? testPool() };
-  return createApp(deps).app;
+export function boot(overrides: Parameters<typeof testDeps>[0] = {}) {
+  return createApp(testDeps(overrides)).app;
+}
+
+/** Empties the given tables between test files (CASCADE follows FKs). */
+export async function truncate(...tables: string[]) {
+  if (tables.length === 0) return;
+  await testPrisma().$executeRawUnsafe(`TRUNCATE ${tables.join(', ')} RESTART IDENTITY CASCADE`);
 }

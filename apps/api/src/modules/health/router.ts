@@ -41,7 +41,7 @@ export function healthRouter(deps: Deps, registry: OpenAPIRegistry, version: str
     response: { status: 200, schema: HealthResponseSchema },
     handler: async () => {
       try {
-        await withTimeout(deps.db.query('select 1'), READY_TIMEOUT_MS);
+        await withTimeout(deps.prisma.$queryRaw`select 1`, READY_TIMEOUT_MS);
       } catch {
         throw new AppError('NOT_READY', 'Database is not reachable', 503);
       }
