@@ -26,7 +26,7 @@ import { opsRoutes } from './modules/ops';
 import { orgRoutes } from './modules/team';
 import { weddingRoutes } from './modules/weddings';
 import { realtimeRoutes } from './modules/realtime';
-import { createWhatsAppProvider, messagingRoutes, webhookRouter } from './modules/messaging';
+import { createWhatsAppProvider, messagingRoutes, ReplyRouter, webhookRouter } from './modules/messaging';
 import { PgListener, prismaRtStore, RealtimeHub } from './common/sse';
 
 function packageVersion(): string {
@@ -62,6 +62,8 @@ export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = 
   const devS3 = deps.config.NODE_ENV !== 'production' ? fakeS3Router(deps.objectStore) : null;
   if (devS3) app.use(devS3); // before express.json: takes raw bodies
   const whatsapp = deps.whatsapp ?? createWhatsAppProvider(deps.config, deps.prisma);
+  // Inbound replies are stored by the webhook and routed by a job (MSG-11); RSV/ARR register handlers.
+  const replies = new ReplyRouter(deps.prisma, deps.logger);
   // Provider webhooks: raw body for the signature, and outside the per-IP rate limit.
   app.use(
     webhookRouter({
@@ -70,6 +72,9 @@ export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = 
       providers: [whatsapp],
       piiHashKey: deps.config.PII_HASH_KEY,
       verifyToken: deps.config.WHATSAPP_VERIFY_TOKEN,
+      onInbound: async (id) => {
+        await deps.jobs.send(replies.job, { webhookEventId: String(id) });
+      },
     }),
   );
   app.use(express.json({ limit: '256kb' }));
@@ -116,5 +121,5 @@ export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = 
   app.use(notFoundHandler);
   app.use(errorHandler(deps.logger));
 
-  return { app, openApiDocument, realtime };
+  return { app, openApiDocument, realtime, replies };
 }
