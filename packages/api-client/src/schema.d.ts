@@ -631,6 +631,194 @@ export interface paths {
     };
     trace?: never;
   };
+  '/v1/weddings/{weddingId}/events/{eventId}/groups': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Who sees this event: everyone, or only parties in the chosen groups */
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          weddingId: string;
+          eventId: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @enum {string} */
+            visibility: 'all' | 'groups';
+            /** @default [] */
+            groupIds?: string[];
+          };
+        };
+      };
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              visibility: 'all' | 'groups';
+              groupIds: string[];
+              audience: {
+                parties: number;
+                guests: number;
+              };
+            };
+          };
+        };
+        /** @description Error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/weddings/{weddingId}/events/{eventId}/audience': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** How many parties and guests can see this event */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          weddingId: string;
+          eventId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              parties: number;
+              guests: number;
+            };
+          };
+        };
+        /** @description Error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/v1/weddings/{weddingId}/contacts': {
     parameters: {
       query?: never;
@@ -4901,6 +5089,245 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/guest/rsvp': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** My party: invited events × members with their answers and diets */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['PartyRsvp'];
+          };
+        };
+        /** @description Error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    /** Answer for any members of my party (batch) and set diets */
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            answers: {
+              /** Format: uuid */
+              eventId: string;
+              /** Format: uuid */
+              guestId: string;
+              /** @enum {string} */
+              status: 'attending' | 'declined' | 'maybe';
+            }[];
+            diets?: {
+              /** Format: uuid */
+              guestId: string;
+              /** @enum {string|null} */
+              diet: 'veg' | 'jain' | 'vegan' | 'eggetarian' | 'non_veg' | null;
+              /** @default [] */
+              allergies?: ('nuts' | 'gluten' | 'dairy' | 'shellfish' | 'egg' | 'soy' | 'other')[];
+            }[];
+          };
+        };
+      };
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['PartyRsvp'];
+          };
+        };
+        /** @description Error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/guest/home': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Everything the guest home needs, for my party (ETag supported) */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['GuestHome'];
+          };
+        };
+        /** @description Error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/v1/weddings/{weddingId}/uploads': {
     parameters: {
       query?: never;
@@ -6439,6 +6866,85 @@ export interface components {
       url: string | null;
       version: number;
       revoked: boolean;
+    };
+    PartyRsvp: {
+      members: {
+        /** Format: uuid */
+        guestId: string;
+        fullName: string;
+        /** @enum {string|null} */
+        ageBand: 'child' | 'adult' | 'senior' | null;
+        /** @enum {string|null} */
+        diet: 'veg' | 'jain' | 'vegan' | 'eggetarian' | 'non_veg' | null;
+        allergies: ('nuts' | 'gluten' | 'dairy' | 'shellfish' | 'egg' | 'soy' | 'other')[];
+      }[];
+      events: {
+        /** Format: uuid */
+        eventId: string;
+        name: string;
+        startsAt: string;
+        rsvpEnabled: boolean;
+        closed: boolean;
+        answers: {
+          /** Format: uuid */
+          guestId: string;
+          /** @enum {string|null} */
+          status: 'attending' | 'declined' | 'maybe' | null;
+        }[];
+      }[];
+    };
+    GuestHome: {
+      wedding: {
+        title: string;
+        startsOn: string;
+        endsOn: string;
+        timezone: string;
+        cities: string[];
+        coverUrl: string | null;
+        palette: string | null;
+      };
+      me: {
+        /** Format: uuid */
+        guestId: string;
+        fullName: string;
+      };
+      party: {
+        label: string;
+        memberCount: number;
+      };
+      events: {
+        /** Format: uuid */
+        id: string;
+        kind: string;
+        name: string;
+        startsAt: string;
+        endsAt: string | null;
+        dressCode: string | null;
+        notes: string | null;
+        venue: {
+          name: string;
+          address: string | null;
+          mapsUrl: string | null;
+          lat: number | null;
+          lng: number | null;
+          parkingNotes: string | null;
+        } | null;
+        rsvp: {
+          enabled: boolean;
+          closed: boolean;
+          answered: number;
+          attending: number;
+          total: number;
+        };
+      }[];
+      contacts: {
+        side: string;
+        label: string;
+        name: string;
+        phone: string;
+        hasWhatsapp: boolean;
+      }[];
+      rsvpPending: number;
     };
     UploadTicket: {
       /** Format: uuid */

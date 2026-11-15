@@ -1,0 +1,1 @@
+export { guestHomeRoutes } from './routes';

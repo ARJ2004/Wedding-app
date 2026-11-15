@@ -106,11 +106,13 @@ export class AccessService {
     const recent = await this.prisma.otp_challenges.findMany({
       where: { party_id: t.partyId, created_at: { gt: new Date(Date.now() - 60 * 60_000) } },
       orderBy: { created_at: 'desc' },
-      select: { created_at: true },
+      select: { created_at: true, install_id: true },
     });
-    if (recent[0] && Date.now() - recent[0].created_at.getTime() < RESEND_AFTER_MS) {
+    // Cooldown per phone (two family members may sign in at once); hourly cap per party.
+    const mine = recent.find((r) => r.install_id === t.installId);
+    if (mine && Date.now() - mine.created_at.getTime() < RESEND_AFTER_MS) {
       throw new AppError('ACC_RESEND_TOO_SOON', 'Please wait a few seconds before asking for another code', 409, {
-        retryAfter: new Date(recent[0].created_at.getTime() + RESEND_AFTER_MS).toISOString(),
+        retryAfter: new Date(mine.created_at.getTime() + RESEND_AFTER_MS).toISOString(),
       });
     }
     if (recent.length >= MAX_SENDS_PER_HOUR) throw new AppError('ACC_OTP_SEND_LIMIT', 'Too many codes asked for. Try again in an hour.', 429);
@@ -122,7 +124,8 @@ export class AccessService {
     }
     const code = this.config.DEV_OTP_CODE;
     const challenge = await this.prisma.$transaction(async (tx) => {
-      await tx.otp_challenges.updateMany({ where: { party_id: t.partyId, status: 'pending' }, data: { status: 'superseded', resolved_at: new Date() } });
+      // A new code on this phone supersedes this phone's pending code only.
+      await tx.otp_challenges.updateMany({ where: { party_id: t.partyId, install_id: t.installId, status: 'pending' }, data: { status: 'superseded', resolved_at: new Date() } });
       const id = randomUUID();
       return tx.otp_challenges.create({
         data: {

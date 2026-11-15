@@ -96,6 +96,12 @@ describe('OTP sign-in and consent (ACC-02a, ACC-04, PRV-01)', () => {
     await request(app).post('/v1/guest/auth/start').send({ token, installId: INSTALL, platform: 'ios' }).expect(423);
   });
 
+  it('two family members can sign in on two phones at the same time', async () => {
+    const { token } = await setup();
+    await signInGuest(token, 0, 'install-phone-one-0001');
+    await signInGuest(token, 1, 'install-phone-two-0002');
+  });
+
   it('refuses members without a phone', async () => {
     const { token } = await setup();
     const start = await request(app).post('/v1/guest/auth/start').send({ token, installId: INSTALL, platform: 'web' }).expect(200);

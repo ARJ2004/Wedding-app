@@ -1780,6 +1780,385 @@
           "revoked"
         ]
       },
+      "PartyRsvp": {
+        "type": "object",
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "guestId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "fullName": {
+                  "type": "string"
+                },
+                "ageBand": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "child",
+                    "adult",
+                    "senior",
+                    null
+                  ]
+                },
+                "diet": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "veg",
+                    "jain",
+                    "vegan",
+                    "eggetarian",
+                    "non_veg",
+                    null
+                  ]
+                },
+                "allergies": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "nuts",
+                      "gluten",
+                      "dairy",
+                      "shellfish",
+                      "egg",
+                      "soy",
+                      "other"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "guestId",
+                "fullName",
+                "ageBand",
+                "diet",
+                "allergies"
+              ]
+            }
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "eventId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "startsAt": {
+                  "type": "string"
+                },
+                "rsvpEnabled": {
+                  "type": "boolean"
+                },
+                "closed": {
+                  "type": "boolean"
+                },
+                "answers": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "guestId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "status": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "enum": [
+                          "attending",
+                          "declined",
+                          "maybe",
+                          null
+                        ]
+                      }
+                    },
+                    "required": [
+                      "guestId",
+                      "status"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "eventId",
+                "name",
+                "startsAt",
+                "rsvpEnabled",
+                "closed",
+                "answers"
+              ]
+            }
+          }
+        },
+        "required": [
+          "members",
+          "events"
+        ]
+      },
+      "GuestHome": {
+        "type": "object",
+        "properties": {
+          "wedding": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "startsOn": {
+                "type": "string"
+              },
+              "endsOn": {
+                "type": "string"
+              },
+              "timezone": {
+                "type": "string"
+              },
+              "cities": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "coverUrl": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "palette": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "title",
+              "startsOn",
+              "endsOn",
+              "timezone",
+              "cities",
+              "coverUrl",
+              "palette"
+            ]
+          },
+          "me": {
+            "type": "object",
+            "properties": {
+              "guestId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "fullName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "guestId",
+              "fullName"
+            ]
+          },
+          "party": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "memberCount": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "label",
+              "memberCount"
+            ]
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "startsAt": {
+                  "type": "string"
+                },
+                "endsAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "dressCode": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "notes": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "venue": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "address": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "mapsUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "lat": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "lng": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "parkingNotes": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "address",
+                    "mapsUrl",
+                    "lat",
+                    "lng",
+                    "parkingNotes"
+                  ]
+                },
+                "rsvp": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "closed": {
+                      "type": "boolean"
+                    },
+                    "answered": {
+                      "type": "integer"
+                    },
+                    "attending": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "enabled",
+                    "closed",
+                    "answered",
+                    "attending",
+                    "total"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "name",
+                "startsAt",
+                "endsAt",
+                "dressCode",
+                "notes",
+                "venue",
+                "rsvp"
+              ]
+            }
+          },
+          "contacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "side": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "phone": {
+                  "type": "string"
+                },
+                "hasWhatsapp": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "side",
+                "label",
+                "name",
+                "phone",
+                "hasWhatsapp"
+              ]
+            }
+          },
+          "rsvpPending": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "wedding",
+          "me",
+          "party",
+          "events",
+          "contacts",
+          "rsvpPending"
+        ]
+      },
       "UploadTicket": {
         "type": "object",
         "properties": {
@@ -2578,6 +2957,275 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WeddingSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/weddings/{weddingId}/events/{eventId}/groups": {
+      "put": {
+        "summary": "Who sees this event: everyone, or only parties in the chosen groups",
+        "tags": [
+          "events"
+        ],
+        "security": [
+          {
+            "hostAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "weddingId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eventId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "all",
+                      "groups"
+                    ]
+                  },
+                  "groupIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "maxItems": 20,
+                    "default": []
+                  }
+                },
+                "required": [
+                  "visibility"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "visibility": {
+                      "type": "string",
+                      "enum": [
+                        "all",
+                        "groups"
+                      ]
+                    },
+                    "groupIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    },
+                    "audience": {
+                      "type": "object",
+                      "properties": {
+                        "parties": {
+                          "type": "number"
+                        },
+                        "guests": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "parties",
+                        "guests"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "visibility",
+                    "groupIds",
+                    "audience"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/weddings/{weddingId}/events/{eventId}/audience": {
+      "get": {
+        "summary": "How many parties and guests can see this event",
+        "tags": [
+          "events"
+        ],
+        "security": [
+          {
+            "hostAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "weddingId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eventId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "parties": {
+                      "type": "number"
+                    },
+                    "guests": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "parties",
+                    "guests"
+                  ]
                 }
               }
             }
@@ -7855,6 +8503,312 @@
             }
           },
           "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/guest/rsvp": {
+      "get": {
+        "summary": "My party: invited events × members with their answers and diets",
+        "tags": [
+          "guest"
+        ],
+        "security": [
+          {
+            "guestAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartyRsvp"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Answer for any members of my party (batch) and set diets",
+        "tags": [
+          "guest"
+        ],
+        "security": [
+          {
+            "guestAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "answers": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "eventId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "guestId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "attending",
+                            "declined",
+                            "maybe"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "eventId",
+                        "guestId",
+                        "status"
+                      ]
+                    },
+                    "maxItems": 200
+                  },
+                  "diets": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "guestId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "diet": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "enum": [
+                            "veg",
+                            "jain",
+                            "vegan",
+                            "eggetarian",
+                            "non_veg",
+                            null
+                          ]
+                        },
+                        "allergies": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "nuts",
+                              "gluten",
+                              "dairy",
+                              "shellfish",
+                              "egg",
+                              "soy",
+                              "other"
+                            ]
+                          },
+                          "maxItems": 7,
+                          "default": []
+                        }
+                      },
+                      "required": [
+                        "guestId",
+                        "diet"
+                      ]
+                    },
+                    "maxItems": 20
+                  }
+                },
+                "required": [
+                  "answers"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartyRsvp"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/guest/home": {
+      "get": {
+        "summary": "Everything the guest home needs, for my party (ETag supported)",
+        "tags": [
+          "guest"
+        ],
+        "security": [
+          {
+            "guestAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuestHome"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
             "description": "Error",
             "content": {
               "application/json": {

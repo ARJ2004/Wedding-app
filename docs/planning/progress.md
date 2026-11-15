@@ -73,10 +73,10 @@ Tracked by the Ralph loop (`.claude/ralph/PROMPT.md`). Status: `todo`, `doing`, 
 | ACC-01 | Personal link | 3 | done | Derived 128-bit invite links (HMAC of party id + version, only sha256 stored), set on create/import/seed; host GET link + rotate (signs all devices out). API done; app link sharing UI with MSG. |
 | ACC-02a | New-device OTP (app) | 5 | done | API: /v1/guest/auth/start (first names + masked phones only), /otp (dev code 000000, nothing sent; 503 until MSG wires WhatsApp/SMS), /verify (HMAC+pepper, 5 attempts, install-bound, party lock after 10 fails → 423), guest_devices with trust ≤ 90 d / wedding+31 d, /refresh (rotation, reuse detection), /logout, /session. Deviation: guest refresh/logout are /v1/guest/auth/* (typed responses) instead of the shared FND routes. App screens next iteration. Needs credentials: Meta WhatsApp OTP template, DLT SMS. |
 | ACC-04 | Consent capture | 3 | done | Consent gate: guest routes require core consent (403 ACC_CONSENT_REQUIRED) except sign-in/session/consent; PUT/DELETE /v1/guest/consents/:purpose (withdrawing core signs the device out). Deviation: DB check per request instead of a token claim (simpler; revisit at OPS-01). |
-| SET-04 | Event visibility by group | 3 | todo | |
+| SET-04 | Event visibility by group | 3 | done | PUT /events/:id/groups (all | groups, validated, audited) + GET audience; listInvitedEvents() over the party_invited_events view is the single source for guest home, RSVP and later MSG targeting. |
 | GH-01 | Guest-mode shell (was "PWA shell") | 2 | todo | |
-| GH-02 | Personal schedule + home aggregate | 5 | todo | |
-| RSV-01a | Per-event RSVP (API + app) | 5 | todo | |
+| GH-02 | Personal schedule + home aggregate | 5 | done | GET /v1/guest/home aggregate: wedding (cover URL, palette), me, party, invited events with venue + RSVP counts, contacts, pending RSVPs; ETag/304. Consent required. App screens next iteration. |
+| RSV-01a | Per-event RSVP (API + app) | 5 | done | GET/PUT /v1/guest/rsvp: batch answers per member × invited event, diets/allergies, refuses other parties (404), hidden events (404), disabled/closed (409); records responder (shared phone) + source; audit. Fixed: OTP cooldown was per party (blocked two phones of one family) → per phone. App screens next iteration. |
 
 ## S5 · 25 Jan – 7 Feb 2027 · Send it once, reach everyone
 

@@ -15,6 +15,8 @@ import { createVerifiers, type IdTokenVerifier } from './common/auth/verifiers';
 import type { RouteContext } from './common/define-route';
 import { AccessService, accessRoutes } from './modules/access';
 import { authRoutes } from './modules/auth';
+import { guestHomeRoutes } from './modules/guest-home';
+import { RsvpService, rsvpRoutes } from './modules/rsvp';
 import { guestRoutes } from './modules/guests';
 import { importRoutes, ImportService } from './modules/guests/import';
 import { MediaService, mediaRoutes } from './modules/media';
@@ -70,6 +72,9 @@ export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = 
   guestRoutes(ctx, { prisma: deps.prisma, linkTokenKey: deps.config.LINK_TOKEN_KEY });
   orgRoutes(ctx, deps);
   accessRoutes(ctx, new AccessService(deps.prisma, tokens, deps.config, deps.logger));
+  const rsvp = new RsvpService(deps.prisma);
+  rsvpRoutes(ctx, rsvp);
+  guestHomeRoutes(ctx, { prisma: deps.prisma, objectStore: deps.objectStore, rsvp });
   const media = new MediaService(deps);
   mediaRoutes(ctx, media);
   importRoutes(ctx, new ImportService({ prisma: deps.prisma, jobs: deps.jobs, media, linkTokenKey: deps.config.LINK_TOKEN_KEY }), deps.prisma);
