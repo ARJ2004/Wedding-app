@@ -17,6 +17,7 @@ import { authRoutes } from './modules/auth';
 import { guestRoutes } from './modules/guests';
 import { healthRoutes } from './modules/health';
 import { opsRoutes } from './modules/ops';
+import { orgRoutes } from './modules/team';
 import { weddingRoutes } from './modules/weddings';
 
 function packageVersion(): string {
@@ -60,6 +61,7 @@ export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = 
   authRoutes(ctx, { prisma: deps.prisma, tokens, verifiers: opts.verifiers ?? createVerifiers(deps.config), opsAdmins });
   weddingRoutes(ctx, deps);
   guestRoutes(ctx, deps);
+  orgRoutes(ctx, deps);
   opsRoutes(ctx, { prisma: deps.prisma, jobs: deps.jobs, opsAdmins });
   app.use(ctx.router);
 
