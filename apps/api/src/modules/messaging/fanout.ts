@@ -216,7 +216,7 @@ export class FanoutService {
    * One templated message to one guest on the priority lane (confirmations, replies). Uses the
    * same recipient/delivery rows as a blast, so status, opt-out and the guest inbox all apply.
    */
-  async sendToGuest(input: { weddingId: string; guestId: string; templateKey: string; params: Record<string, string>; kind: 'rsvp_confirmation' | 'system'; module: string }) {
+  async sendToGuest(input: { weddingId: string; guestId: string; templateKey: string; params: Record<string, string>; kind: 'rsvp_confirmation' | 'system' | 'otp'; module: string; ignoreOptOut?: boolean }) {
     const { prisma } = this.d;
     const tpl = await prisma.message_templates.findUnique({
       where: { key: input.templateKey },
@@ -230,7 +230,7 @@ export class FanoutService {
     const lang = (['hi', 'kn'].includes(guest.parties.preferred_language) ? guest.parties.preferred_language : 'en') as 'en' | 'hi' | 'kn';
     const variant = tpl.message_template_variants.find((v) => v.language === lang) ?? tpl.message_template_variants.find((v) => v.language === 'en');
     const phone = guest.phone_status === 'valid' ? guest.phone_e164 : null;
-    const optedOut = phone ? await prisma.messaging_opt_outs.count({ where: { phone_hash: phoneHash(this.d.piiHashKey, phone), channel: 'whatsapp' } }) : 0;
+    const optedOut = phone && !input.ignoreOptOut ? await prisma.messaging_opt_outs.count({ where: { phone_hash: phoneHash(this.d.piiHashKey, phone), channel: 'whatsapp' } }) : 0;
     const deliverable = !!(variant && phone && !optedOut);
     const { message, delivery } = await prisma.$transaction(async (tx) => {
       const message = await tx.messages.create({

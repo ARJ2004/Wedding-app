@@ -26,7 +26,7 @@ import { opsRoutes } from './modules/ops';
 import { orgRoutes } from './modules/team';
 import { weddingRoutes } from './modules/weddings';
 import { realtimeRoutes } from './modules/realtime';
-import { wireReplies } from './wiring';
+import { wireOtp, wireReplies } from './wiring';
 import { createWhatsAppProvider, FanoutService, MessageStats, messageRoutes, messagingRoutes, ReplyRouter, webhookRouter } from './modules/messaging';
 import { PgListener, prismaRtStore, RealtimeHub } from './common/sse';
 
@@ -91,7 +91,8 @@ export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = 
   weddingRoutes(ctx, deps);
   guestRoutes(ctx, { prisma: deps.prisma, linkTokenKey: deps.config.LINK_TOKEN_KEY });
   orgRoutes(ctx, deps);
-  accessRoutes(ctx, new AccessService(deps.prisma, tokens, deps.config, deps.logger));
+  const access = new AccessService(deps.prisma, tokens, deps.config, deps.logger);
+  accessRoutes(ctx, access);
   const realtime =
     deps.realtime ??
     new RealtimeHub(
@@ -111,6 +112,7 @@ export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = 
   messagingRoutes(ctx, { prisma: deps.prisma, providerName: whatsapp.name });
   const fanout = new FanoutService({ prisma: deps.prisma, jobs: deps.jobs, provider: whatsapp, logger: deps.logger, piiHashKey: deps.config.PII_HASH_KEY, rate: deps.config.MSG_WA_RATE, stats: new MessageStats(deps.prisma, deps.logger) });
   wireReplies({ prisma: deps.prisma, config: deps.config, replies, fanout });
+  wireOtp(access, fanout);
   messageRoutes(ctx, { prisma: deps.prisma, provider: whatsapp, piiHashKey: deps.config.PII_HASH_KEY, fanout });
   opsRoutes(ctx, { prisma: deps.prisma, jobs: deps.jobs, opsAdmins });
   app.use(ctx.router);

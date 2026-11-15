@@ -3,6 +3,7 @@ import { deriveLinkToken } from './common/auth/link-token';
 import type { AppConfig } from './config/env';
 import type { FanoutService, ReplyRouter } from './modules/messaging';
 import { RsvpReplyHandler } from './modules/rsvp';
+import type { AccessService } from './modules/access';
 
 /**
  * Cross-module wiring shared by the API and the worker (both must agree, since replies are
@@ -20,5 +21,13 @@ export function wireReplies(deps: { prisma: PrismaClient; config: AppConfig; rep
       kind: reply.templateKey === 'rsvp_confirmation' ? 'rsvp_confirmation' : 'system',
       module: cmd.action.split('.')[0]!,
     });
+  };
+}
+
+/** Guest sign-in codes go out on MSG's priority lane; a code the guest asked for ignores STOP (07-msg §2). */
+export function wireOtp(access: AccessService, fanout: FanoutService) {
+  access.otpSender = async ({ weddingId, guestId, code }) => {
+    const r = await fanout.sendToGuest({ weddingId, guestId, templateKey: 'otp', params: { code }, kind: 'otp', module: 'acc', ignoreOptOut: true });
+    return { deliveryId: r?.deliveryId ?? null };
   };
 }

@@ -1,4 +1,4 @@
-import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import type { Logger } from 'pino';
@@ -11,9 +11,22 @@ import { writeAudit } from '../audit';
 const TRUST_DAYS = 90;
 const OTP_TTL_MS = 10 * 60_000;
 const RESEND_AFTER_MS = 30_000;
-const MAX_SENDS_PER_HOUR = 5;
 const LOCK_AFTER_FAILS = 10;
 const LOCK_MS = 60 * 60_000;
+const SECOND_LOCK_MS = 24 * 60 * 60_000;
+const MIN = 60_000;
+const HOUR = 60 * MIN;
+const DAY = 24 * HOUR;
+/** OTP send limits (05-acc §8, ACC-05). Per phone counts span every wedding. */
+export const OTP_LIMITS = [
+  { scope: 'party', windowMs: 15 * MIN, max: 3, message: 'Too many codes asked for. Try again in 15 minutes.' },
+  { scope: 'party', windowMs: DAY, max: 10, message: 'Too many codes today. Try again tomorrow or ask the family.' },
+  { scope: 'phone', windowMs: HOUR, max: 5, message: 'Too many codes to this phone. Try again in an hour.' },
+  { scope: 'phone', windowMs: DAY, max: 15, message: 'Too many codes to this phone today.' },
+  { scope: 'ip', windowMs: HOUR, max: 10, message: 'Too many codes from this network. Try again in an hour.' },
+] as const;
+
+export type OtpSender = (input: { weddingId: string; guestId: string; code: string }) => Promise<{ deliveryId: string | null }>;
 
 type Platform = 'android' | 'ios' | 'web';
 
@@ -95,7 +108,10 @@ export class AccessService {
     }
   }
 
-  async sendOtp(input: { linkTicket: string; guestId: string; channel: 'whatsapp' | 'sms' }) {
+  /** Set by the app wiring: sends the code through MSG's priority lane (WhatsApp authentication template). */
+  otpSender?: OtpSender;
+
+  async sendOtp(input: { linkTicket: string; guestId: string; channel: 'whatsapp' | 'sms'; ip?: string }) {
     const t = this.readTicket(input.linkTicket);
     await this.assertNotLocked(t.partyId);
     const guest = await this.prisma.guests.findFirst({ where: { id: input.guestId, party_id: t.partyId, deleted_at: null } });
@@ -103,26 +119,37 @@ export class AccessService {
     if (guest.phone_status !== 'valid' || !guest.phone_e164) {
       throw new AppError('ACC_NO_PHONE', 'We have no phone number for this person. Pick someone else or ask the family.', 422);
     }
+    const phoneHmac = this.hmac(this.config.PII_HASH_KEY, guest.phone_e164);
+    const ipHmac = input.ip ? this.hmac(this.config.PII_HASH_KEY, `ip:${input.ip}`) : null;
+    const since = new Date(Date.now() - DAY);
     const recent = await this.prisma.otp_challenges.findMany({
-      where: { party_id: t.partyId, created_at: { gt: new Date(Date.now() - 60 * 60_000) } },
+      where: { created_at: { gt: since }, OR: [{ party_id: t.partyId }, { phone_hmac: phoneHmac }, ...(ipHmac ? [{ ip_hmac: ipHmac }] : [])] },
       orderBy: { created_at: 'desc' },
-      select: { created_at: true, install_id: true },
+      select: { created_at: true, install_id: true, party_id: true, phone_hmac: true, ip_hmac: true },
     });
-    // Cooldown per phone (two family members may sign in at once); hourly cap per party.
-    const mine = recent.find((r) => r.install_id === t.installId);
+    // Cooldown per phone (two family members may sign in at once).
+    const mine = recent.find((r) => r.party_id === t.partyId && r.install_id === t.installId);
     if (mine && Date.now() - mine.created_at.getTime() < RESEND_AFTER_MS) {
       throw new AppError('ACC_RESEND_TOO_SOON', 'Please wait a few seconds before asking for another code', 409, {
         retryAfter: new Date(mine.created_at.getTime() + RESEND_AFTER_MS).toISOString(),
       });
     }
-    if (recent.length >= MAX_SENDS_PER_HOUR) throw new AppError('ACC_OTP_SEND_LIMIT', 'Too many codes asked for. Try again in an hour.', 429);
-
-    const dev = this.config.DEV_AUTH_ENABLED && this.config.NODE_ENV !== 'production';
-    if (!dev) {
-      // Needs credentials: WhatsApp authentication template (Meta) + DLT SMS. Wired in MSG-01/07 (S5).
-      throw new AppError('ACC_OTP_CHANNEL_UNAVAILABLE', 'Codes cannot be sent yet. Please try again later.', 503);
+    const same = (a: Uint8Array | null, b: Buffer | null) => !!a && !!b && Buffer.from(a).equals(b);
+    for (const l of OTP_LIMITS) {
+      const from = Date.now() - l.windowMs;
+      const hits = recent.filter(
+        (r) => r.created_at.getTime() > from && (l.scope === 'party' ? r.party_id === t.partyId : l.scope === 'phone' ? same(r.phone_hmac, phoneHmac) : same(r.ip_hmac, ipHmac)),
+      );
+      if (hits.length >= l.max) {
+        const oldest = hits[hits.length - 1]!.created_at.getTime();
+        this.logger.warn({ scope: l.scope, partyId: t.partyId }, 'otp send limit hit');
+        throw new AppError('ACC_OTP_SEND_LIMIT', l.message, 429, { scope: l.scope, retryAfter: new Date(oldest + l.windowMs).toISOString() });
+      }
     }
-    const code = this.config.DEV_OTP_CODE;
+
+    const dev = this.config.OTP_SEND_MODE === 'dev' && this.config.NODE_ENV !== 'production';
+    if (!dev && !this.otpSender) throw new AppError('ACC_OTP_CHANNEL_UNAVAILABLE', 'Codes cannot be sent yet. Please try again later.', 503);
+    const code = dev ? this.config.DEV_OTP_CODE : String(randomInt(0, 1_000_000)).padStart(6, '0');
     const challenge = await this.prisma.$transaction(async (tx) => {
       // A new code on this phone supersedes this phone's pending code only.
       await tx.otp_challenges.updateMany({ where: { party_id: t.partyId, install_id: t.installId, status: 'pending' }, data: { status: 'superseded', resolved_at: new Date() } });
@@ -135,15 +162,21 @@ export class AccessService {
           guest_id: guest.id,
           install_id: t.installId,
           platform: t.platform,
-          phone_hmac: this.hmac(this.config.PII_HASH_KEY, guest.phone_e164!),
-          channel: 'dev',
+          phone_hmac: phoneHmac,
+          ip_hmac: ipHmac,
+          channel: dev ? 'dev' : 'whatsapp',
           code_hmac: this.hmac(this.config.OTP_PEPPER, `${id}:${code}`),
           expires_at: new Date(Date.now() + OTP_TTL_MS),
         },
       });
     });
-    this.logger.info({ challengeId: challenge.id, devOtp: code }, 'dev OTP (not sent; DEV_AUTH_ENABLED)');
-    return { challengeId: challenge.id, channel: 'dev' as const, maskedPhone: maskPhone(guest.phone_e164)!, expiresAt: challenge.expires_at.toISOString() };
+    if (dev) {
+      this.logger.info({ challengeId: challenge.id, devOtp: code }, 'dev OTP (not sent; OTP_SEND_MODE=dev)');
+      return { challengeId: challenge.id, channel: 'dev' as const, maskedPhone: maskPhone(guest.phone_e164)!, expiresAt: challenge.expires_at.toISOString() };
+    }
+    const sent = await this.otpSender!({ weddingId: guest.wedding_id, guestId: guest.id, code });
+    await this.prisma.otp_challenges.update({ where: { id: challenge.id }, data: { delivery_id: sent.deliveryId } });
+    return { challengeId: challenge.id, channel: 'whatsapp' as const, maskedPhone: maskPhone(guest.phone_e164)!, expiresAt: challenge.expires_at.toISOString() };
   }
 
   /** Counts a wrong code toward the party lock; returns true when this failure locked the party. */
@@ -153,17 +186,21 @@ export class AccessService {
     const inWindow = s?.window_started_at && now.getTime() - s.window_started_at.getTime() < 60 * 60_000;
     const failed = (inWindow ? s!.failed_verifies : 0) + 1;
     const lock = failed >= LOCK_AFTER_FAILS;
+    // A second lock within 24 h of the last one lasts 24 h and alerts (05-acc §8).
+    const repeat = lock && !!s?.locked_until && now.getTime() - s.locked_until.getTime() < DAY;
+    const until = lock ? new Date(now.getTime() + (repeat ? SECOND_LOCK_MS : LOCK_MS)) : null;
     await this.prisma.party_auth_state.upsert({
       where: { party_id: partyId },
-      create: { party_id: partyId, wedding_id: weddingId, failed_verifies: failed, window_started_at: now, locked_until: lock ? new Date(now.getTime() + LOCK_MS) : null, lock_count: lock ? 1 : 0 },
+      create: { party_id: partyId, wedding_id: weddingId, failed_verifies: failed, window_started_at: now, locked_until: until, lock_count: lock ? 1 : 0 },
       update: {
         failed_verifies: lock ? 0 : failed,
         window_started_at: inWindow ? undefined : now,
-        locked_until: lock ? new Date(now.getTime() + LOCK_MS) : undefined,
+        locked_until: until ?? undefined,
         lock_count: lock ? { increment: 1 } : undefined,
         updated_at: now,
       },
     });
+    if (repeat) this.logger.error({ alert: 'acc.party_locked_twice', partyId, weddingId }, 'invite locked twice in 24 h');
     return lock;
   }
 
@@ -314,6 +351,49 @@ export class AccessService {
   }
 
   // ── host side ──────────────────────────────────────────────────────────────
+  /** Host view (ACC-05): devices, lock state and the last code sent; no phones, IPs or codes. */
+  async hostAccess(weddingId: string, partyId: string) {
+    const p = await this.prisma.parties.findFirst({ where: { id: partyId, wedding_id: weddingId, deleted_at: null }, select: { id: true } });
+    if (!p) throw new AppError('GST_PARTY_NOT_FOUND', 'Party not found', 404);
+    const [devices, state, last] = await Promise.all([
+      this.prisma.guest_devices.findMany({
+        where: { party_id: partyId, revoked_at: null },
+        include: { guests_guest_devices_active_guest_idToguests: { select: { full_name: true } } },
+        orderBy: { last_seen_at: 'desc' },
+      }),
+      this.prisma.party_auth_state.findUnique({ where: { party_id: partyId } }),
+      this.prisma.otp_challenges.findFirst({ where: { party_id: partyId }, orderBy: { created_at: 'desc' }, select: { created_at: true, channel: true, status: true } }),
+    ]);
+    const now = new Date();
+    return {
+      locked: !!state?.locked_until && state.locked_until > now,
+      lockedUntil: state?.locked_until && state.locked_until > now ? state.locked_until.toISOString() : null,
+      failedAttempts: state?.failed_verifies ?? 0,
+      lastCode: last ? { at: last.created_at.toISOString(), channel: last.channel, status: last.status } : null,
+      devices: devices.map((d) => ({
+        id: d.id,
+        platform: d.platform,
+        summary: d.client_summary,
+        member: d.guests_guest_devices_active_guest_idToguests.full_name,
+        lastSeenAt: d.last_seen_at.toISOString(),
+        trustedUntil: d.trusted_until.toISOString(),
+      })),
+    };
+  }
+
+  async unlock(actor: { userId: string; role: string }, weddingId: string, partyId: string) {
+    const n = await this.prisma.party_auth_state.updateMany({ where: { party_id: partyId, wedding_id: weddingId }, data: { locked_until: null, failed_verifies: 0, updated_at: new Date() } });
+    const exists = await this.prisma.parties.count({ where: { id: partyId, wedding_id: weddingId, deleted_at: null } });
+    if (!exists) throw new AppError('GST_PARTY_NOT_FOUND', 'Party not found', 404);
+    await writeAudit(this.prisma, { weddingId, actor: { type: 'user', id: actor.userId, role: actor.role }, action: 'party.unlocked', entityType: 'party', entityId: partyId, after: { hadState: n.count > 0 } });
+  }
+
+  async revokeDevice(actor: { userId: string; role: string }, weddingId: string, partyId: string, deviceId: string) {
+    const n = await this.prisma.guest_devices.updateMany({ where: { id: deviceId, party_id: partyId, wedding_id: weddingId, revoked_at: null }, data: { revoked_at: new Date(), revoke_reason: 'host_revoked' } });
+    if (n.count === 0) throw new AppError('ACC_DEVICE_NOT_FOUND', 'Device not found', 404);
+    await writeAudit(this.prisma, { weddingId, actor: { type: 'user', id: actor.userId, role: actor.role }, action: 'guest.device_revoked', entityType: 'guest_device', entityId: deviceId, after: { partyId } });
+  }
+
   async hostLink(weddingId: string, partyId: string) {
     const p = await this.prisma.parties.findFirst({ where: { id: partyId, wedding_id: weddingId, deleted_at: null } });
     if (!p) throw new AppError('GST_PARTY_NOT_FOUND', 'Party not found', 404);

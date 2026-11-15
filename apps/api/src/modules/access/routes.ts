@@ -1,3 +1,4 @@
+import { AppError } from '../../common/errors';
 import type { Request } from 'express';
 import { defineRoute, type RouteContext } from '../../common/define-route';
 import { z } from '../../common/openapi';
@@ -66,7 +67,7 @@ export function accessRoutes(ctx: RouteContext, svc: AccessService) {
       status: 200,
       schema: z.object({ challengeId: z.string().uuid(), channel: z.enum(['whatsapp', 'sms', 'dev']), maskedPhone: z.string(), expiresAt: z.string() }).openapi('OtpChallenge'),
     },
-    handler: ({ body }) => svc.sendOtp(body),
+    handler: ({ body, req }) => svc.sendOtp({ ...body, ip: req.ip }),
   });
 
   defineRoute(ctx, {
@@ -183,5 +184,61 @@ export function accessRoutes(ctx: RouteContext, svc: AccessService) {
     request: { params: PartyParams },
     response: { status: 200, schema: PartyLink },
     handler: ({ req, params }) => svc.rotate({ userId: req.principal!.userId, role: req.membership!.role }, params.weddingId, params.partyId),
+  });
+  const DeviceParams = PartyParams.extend({ deviceId: z.string().uuid() });
+  const ownerOnly = (role: string) => {
+    if (role !== 'owner' && role !== 'co_host') throw new AppError('ROL_FORBIDDEN', 'Only the couple can do this', 403);
+  };
+  defineRoute(ctx, {
+    method: 'get',
+    path: '/v1/weddings/:weddingId/parties/:partyId/access',
+    summary: "Who is signed in on this invite, lock state and the last code sent",
+    tags: ['guests'],
+    auth: 'host',
+    permission: 'link.rotate',
+    request: { params: PartyParams },
+    response: {
+      status: 200,
+      schema: z
+        .object({
+          locked: z.boolean(),
+          lockedUntil: z.string().nullable(),
+          failedAttempts: z.number().int(),
+          lastCode: z.object({ at: z.string(), channel: z.string(), status: z.string() }).nullable(),
+          devices: z.array(z.object({ id: z.string(), platform: z.string(), summary: z.string().nullable(), member: z.string(), lastSeenAt: z.string(), trustedUntil: z.string() })),
+        })
+        .openapi('PartyAccess'),
+    },
+    handler: ({ params }) => svc.hostAccess(params.weddingId, params.partyId),
+  });
+
+  defineRoute(ctx, {
+    method: 'post',
+    path: '/v1/weddings/:weddingId/parties/:partyId/access/unlock',
+    summary: 'Unlock an invite locked by wrong codes (owner and co-host)',
+    tags: ['guests'],
+    auth: 'host',
+    permission: 'link.rotate',
+    request: { params: PartyParams },
+    response: { status: 204 },
+    handler: async ({ params, req }) => {
+      ownerOnly(req.membership!.role);
+      await svc.unlock({ userId: req.principal!.userId, role: req.membership!.role }, params.weddingId, params.partyId);
+    },
+  });
+
+  defineRoute(ctx, {
+    method: 'delete',
+    path: '/v1/weddings/:weddingId/parties/:partyId/access/devices/:deviceId',
+    summary: 'Sign one phone out of this invite (owner and co-host)',
+    tags: ['guests'],
+    auth: 'host',
+    permission: 'link.rotate',
+    request: { params: DeviceParams },
+    response: { status: 204 },
+    handler: async ({ params, req }) => {
+      ownerOnly(req.membership!.role);
+      await svc.revokeDevice({ userId: req.principal!.userId, role: req.membership!.role }, params.weddingId, params.partyId, params.deviceId);
+    },
   });
 }

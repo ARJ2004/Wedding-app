@@ -63,6 +63,7 @@ describe('loadConfig', () => {
     ['OBJECT_STORE', 'fake', 'OBJECT_STORE=fake is not allowed in production'],
     ['OBJECT_STORE', 'local', 'OBJECT_STORE=local is not allowed in production'],
     ['MESSAGING_PROVIDER', 'log', 'MESSAGING_PROVIDER=log is not allowed in production'],
+    ['OTP_SEND_MODE', 'dev', 'OTP_SEND_MODE=dev is not allowed in production'],
     ['OPENAPI_DOCS', 'true', 'OPENAPI_DOCS must be false in production'],
     ['GOOGLE_WEB_CLIENT_ID', '', 'GOOGLE_WEB_CLIENT_ID is required in production'],
     ['SENTRY_DSN', '', 'SENTRY_DSN is required in production'],

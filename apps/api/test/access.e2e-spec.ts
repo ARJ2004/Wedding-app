@@ -1,6 +1,10 @@
 import request from 'supertest';
 import { deriveLinkToken } from '../src/common/auth/link-token';
-import { boot, closePrisma, resetData, signInHost, testPrisma } from './helpers';
+import { createApp } from '../src/app';
+import { InlineJobQueue } from '../src/common/jobs';
+import { loadConfig } from '../src/config/env';
+import { LogSinkProvider, phoneHash, TemplateService } from '../src/modules/messaging';
+import { boot, closePrisma, resetData, signInHost, silentLogger, testDeps, testPrisma, truncate } from './helpers';
 
 beforeEach(resetData);
 afterAll(closePrisma);
@@ -109,12 +113,26 @@ describe('OTP sign-in and consent (ACC-02a, ACC-04, PRV-01)', () => {
     expect(res.body.error.code).toBe('ACC_NO_PHONE');
   });
 
-  it('is unavailable outside dev until messaging is configured', async () => {
+  it('sends a real random code over WhatsApp when OTP_SEND_MODE=whatsapp (ACC-05)', async () => {
     const { token } = await setup();
-    const prodLike = boot({ config: { DEV_AUTH_ENABLED: false } });
-    const start = await request(prodLike).post('/v1/guest/auth/start').send({ token, installId: INSTALL, platform: 'web' }).expect(200);
-    const res = await request(prodLike).post('/v1/guest/auth/otp').send({ linkTicket: start.body.linkTicket, guestId: start.body.members[0].guestId }).expect(503);
-    expect(res.body.error.code).toBe('ACC_OTP_CHANNEL_UNAVAILABLE');
+    const prisma = testPrisma();
+    await truncate('message_templates', 'messaging_log_sink');
+    await new TemplateService(prisma, new LogSinkProvider(prisma, 'x'.repeat(32)), silentLogger).syncCatalogue();
+    const jobs = new InlineJobQueue();
+    const real = createApp(testDeps({ jobs, config: { OTP_SEND_MODE: 'whatsapp' } })).app;
+    // The family phone opted out of announcements: a code they asked for still goes out.
+    await prisma.messaging_opt_outs.create({ data: { phone_hash: phoneHash(loadConfig().PII_HASH_KEY, '+919845012345'), channel: 'whatsapp', source: 'stop_keyword' } });
+    const start = await request(real).post('/v1/guest/auth/start').send({ token, installId: INSTALL, platform: 'android' }).expect(200);
+    const otp = await request(real).post('/v1/guest/auth/otp').send({ linkTicket: start.body.linkTicket, guestId: start.body.members[0].guestId }).expect(200);
+    expect(otp.body.channel).toBe('whatsapp');
+    expect(jobs.sent.map((j) => j.name)).toEqual(['msg.send-one']); // priority lane
+    await jobs.drain(silentLogger);
+    const sink = await prisma.messaging_log_sink.findFirstOrThrow();
+    const code = /^mehfil_otp_v1\((\d{6})\)$/.exec(sink.rendered)![1]!;
+    await request(real).post('/v1/guest/auth/verify').send({ challengeId: otp.body.challengeId, code: code === '000000' ? '111111' : '000000', installId: INSTALL }).expect(400);
+    await request(real).post('/v1/guest/auth/verify').send({ challengeId: otp.body.challengeId, code, installId: INSTALL }).expect(200);
+    expect((await prisma.otp_challenges.findUniqueOrThrow({ where: { id: otp.body.challengeId } })).delivery_id).not.toBeNull();
+    await prisma.messaging_opt_outs.deleteMany();
   });
 });
 

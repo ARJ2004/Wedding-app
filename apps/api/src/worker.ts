@@ -11,13 +11,15 @@ import type { AppConfig } from './config/env';
 import type { Logger } from 'pino';
 import { initSentry, Metrics } from './common/observability';
 import { wireReplies } from './wiring';
+import { accessJobs } from './modules/access';
 
 /** Every job the worker runs. Modules add their `jobs()` here as they land. */
 export function allJobs(deps: { prisma: PrismaClient; jobs: PgBossJobQueue; objectStore: ReturnType<typeof createObjectStore>; linkTokenKey: string; templates: TemplateService; replies: ReplyRouter; fanout: FanoutService; stats: MessageStats }): JobDefinition[] {
   const media = new MediaService(deps);
   const imports = new ImportService({ prisma: deps.prisma, jobs: deps.jobs, media, linkTokenKey: deps.linkTokenKey });
   return [
-    ...housekeepingJobs(deps.prisma), ...Object.values(media.jobs), ...Object.values(imports.jobs), ...Object.values(deps.templates.jobs),
+    ...housekeepingJobs(deps.prisma),
+    ...accessJobs(deps.prisma), ...Object.values(media.jobs), ...Object.values(imports.jobs), ...Object.values(deps.templates.jobs),
     ...Object.values(deps.fanout.jobs),
     deps.stats.job,
     deps.replies.job,

@@ -20,6 +20,8 @@ const EnvSchema = z.object({
   DEV_AUTH_ENABLED: bool.default(false),
   /** Fixed guest OTP when DEV_AUTH_ENABLED (nothing is sent). */
   DEV_OTP_CODE: z.string().regex(/^\d{6}$/).default('000000'),
+  /** dev: fixed DEV_OTP_CODE, nothing sent. whatsapp: random code via the WhatsApp authentication template (ACC-05). */
+  OTP_SEND_MODE: z.enum(['dev', 'whatsapp']).default('whatsapp'),
   /** Derives guest link tokens (ACC §2). Rotating it invalidates every guest link. */
   LINK_TOKEN_KEY: z.string().min(32).default('dev-only-link-token-key-change-me-0123456789'),
   /** Pepper for OTP code hashes. */
@@ -84,6 +86,7 @@ function productionProblems(c: AppConfig): string[] {
   if (c.DEV_AUTH_ENABLED) problems.push('DEV_AUTH_ENABLED must be false in production');
   if (c.OBJECT_STORE === 'fake' || c.OBJECT_STORE === 'local') problems.push(`OBJECT_STORE=${c.OBJECT_STORE} is not allowed in production`);
   if (c.MESSAGING_PROVIDER === 'log') problems.push('MESSAGING_PROVIDER=log is not allowed in production');
+  if (c.OTP_SEND_MODE === 'dev') problems.push('OTP_SEND_MODE=dev is not allowed in production');
   if (c.MESSAGING_PROVIDER === 'meta') {
     for (const k of ['WHATSAPP_PHONE_NUMBER_ID', 'WHATSAPP_WABA_ID', 'WHATSAPP_ACCESS_TOKEN'] as const) {
       if (!c[k]) problems.push(`${k} is required in production`);

@@ -6,6 +6,7 @@ process.env.JWT_GUEST_SECRET ??= 'test-only-guest-secret-0123456789abcdef012';
 process.env.DEV_AUTH_ENABLED ??= 'true';
 process.env.OBJECT_STORE ??= 'fake';
 process.env.MESSAGING_PROVIDER ??= 'log';
+process.env.OTP_SEND_MODE ??= 'dev';
 process.env.OPENAPI_DOCS ??= 'true';
 process.env.LOG_LEVEL ??= 'silent';
 process.env.RATE_LIMIT_PER_MINUTE ??= '100000';
