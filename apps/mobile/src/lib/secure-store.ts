@@ -1,6 +1,6 @@
 import * as Keychain from 'react-native-keychain';
 
-export type SecureKey = 'host' | 'guest' | 'install';
+export type SecureKey = 'host' | 'guest' | 'install' | 'cachekey';
 
 const service = (key: SecureKey) => `in.mehfil.app.${key}`;
 

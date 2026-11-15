@@ -67,7 +67,7 @@ Tracked by the Ralph loop (`.claude/ralph/PROMPT.md`). Status: `todo`, `doing`, 
 | --- | --- | --- | --- | --- |
 | APP-01b | App shell, sessions and host sign-in | 3 | done | Multi-identity sessions: host + guest each in their own keychain entry, shared install id, guest refresh single-flight, API client picks the identity per path; Guest/Host mode switch. |
 | APP-02 | Deep and universal links | 3 | done | Invite links https://mehfil.app/g/<token> open Guest mode (Linking on launch + while running; pasted links too). Android App Link intent filter (autoVerify); iOS associated domain entitlements file. Needs: assetlinks.json / apple-app-site-association on mehfil.app (Play signing SHA-256, Apple team id). |
-| APP-04b | MMKV query persister + offline mutation outbox (split from APP-04) | 2 | todo | |
+| APP-04b | MMKV query persister + offline mutation outbox (split from APP-04) | 2 | done | Encrypted MMKV (key in Keychain, separate from install id); PersistQueryClientProvider persists only meta.persist queries (guest home, RSVP); outbox replays queued writes with a stable Idempotency-Key, drops on 4xx, retries 5xx; RSVP saves offline show the answers immediately with "Saved on your phone". Screens guest-07/08/09. |
 | APP-04 | Offline cache and mutation outbox | 3 | done | Partial: TanStack queries marked persist with 14-day gcTime; MMKV persister + offline mutation outbox still to do (APP-04b). |
 | FND-14 | (new, absorbs ARR-05) Realtime infra | 3 | todo | |
 | PRV-01 | Notice and consent records | 3 | done | privacy_notices + texts (draft guest-2027.1 seeded by migration, sha256 of what was shown), consents with notice version/source/locale, GET /v1/guest/privacy-notice. Needs counsel review of the notice text (VAL-13). |

@@ -22,11 +22,17 @@ export function GuestHomeScreen({ onRsvp }: { onRsvp: () => void }) {
     banner: { backgroundColor: th.colors.surfaceRaised, borderColor: th.colors.accent, borderWidth: 2 },
   }));
   if (home.isLoading) return <Screen><Loading /></Screen>;
-  if (!home.data) return <Screen><ErrorState message={(home.error as Error | null)?.message ?? ''} onRetry={() => { void home.refetch(); }} /></Screen>;
+  if (!home.data && !home.isFetching) return <Screen><ErrorState message={(home.error as Error | null)?.message ?? ''} onRetry={() => { void home.refetch(); }} /></Screen>;
+  if (!home.data) return <Screen><Loading /></Screen>;
   const h = home.data;
 
   return (
     <Screen testID="screen-guest-home">
+      {home.isError || (home.isFetched && home.isStale && home.errorUpdateCount > 0) ? (
+        <Text variant="caption" tone="muted" testID="offline-banner">
+          {t('guestHome.offline')}
+        </Text>
+      ) : null}
       <View style={s.hero}>
         {h.wedding.coverUrl ? <Image source={{ uri: h.wedding.coverUrl }} style={s.cover} accessibilityIgnoresInvertColors /> : null}
         <Text tone="onPrimary">{t('guestHome.hello', { name: h.me.fullName.split(' ')[0] ?? h.me.fullName })}</Text>

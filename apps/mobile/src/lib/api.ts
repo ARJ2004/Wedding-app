@@ -1,5 +1,7 @@
 import { createApiClient, type Middleware } from '@mehfil/api-client';
 import { QueryClient } from '@tanstack/react-query';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import { kv } from './kv';
 import { config } from './config';
 import { useGuestSession } from './guest-session';
 import { useSession } from './session';
@@ -53,5 +55,12 @@ export function unwrap<T>(res: { data?: T; error?: unknown; response: Response }
 }
 
 export const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
+  defaultOptions: { queries: { staleTime: 30_000, retry: 1, networkMode: 'offlineFirst' } },
 });
+
+/**
+ * Only queries marked `meta: { persist: true }` (guest home, RSVP state, schedules) are written to
+ * the device, so the guest home opens instantly — and offline — at the venue.
+ */
+export const persister = createSyncStoragePersister({ storage: kv, key: 'query-cache.v1', throttleTime: 1000 });
+export const PERSIST_MAX_AGE = 14 * 86_400_000;

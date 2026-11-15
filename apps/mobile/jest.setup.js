@@ -11,3 +11,7 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
 jest.mock('react-native-get-random-values', () => ({}));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 jest.mock('@react-native-documents/picker', () => ({ pick: jest.fn(async () => []), types: { xlsx: 'xlsx', csv: 'csv' } }));
+jest.mock('react-native-mmkv', () => {
+  const m = new Map();
+  return { createMMKV: () => ({ getString: (k) => m.get(k), set: (k, v) => m.set(k, v), remove: (k) => m.delete(k) }) };
+});

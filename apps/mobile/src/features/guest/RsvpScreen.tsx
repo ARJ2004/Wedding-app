@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { formatInZone, useT } from '../../i18n/useT';
 import { useGuestSession } from '../../lib/guest-session';
+import { useOutbox } from '../../lib/outbox';
 import { useStyles } from '../../theme/ThemeProvider';
 import { Button, Card, Chip, ChipRow, Loading, Screen, SectionLabel, Text } from '../../ui';
 import { useGuestRsvp, useSaveRsvp } from './hooks';
@@ -24,7 +25,8 @@ export function RsvpScreen() {
   const tz = useGuestSession((s) => s.session?.wedding.timezone ?? 'Asia/Kolkata');
   const [answers, setAnswers] = useState<Record<string, Status>>({});
   const [diets, setDiets] = useState<Record<string, Diet | null>>({});
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState<boolean | 'queued'>(false);
+  const queued = useOutbox((o) => o.items.filter((i) => i.path === '/v1/guest/rsvp').length);
   const s = useStyles((th) => ({ member: { gap: th.spacing.xs, paddingVertical: th.spacing.xs } }));
 
   const current = useMemo(() => {
@@ -46,10 +48,10 @@ export function RsvpScreen() {
         diets: Object.entries(diets).map(([guestId, diet]) => ({ guestId, diet, allergies: [] })),
       },
       {
-        onSuccess: () => {
+        onSuccess: (res) => {
           setAnswers({});
           setDiets({});
-          setSaved(true);
+          setSaved(res === 'queued' ? 'queued' : true);
         },
       },
     );
@@ -59,7 +61,13 @@ export function RsvpScreen() {
       testID="screen-rsvp"
       footer={
         <View>
-          {changes ? <Text variant="caption" tone="muted">{t('rsvp.unsaved', { count: changes })}</Text> : saved ? <Text variant="caption" tone="success">{t('rsvp.saved')}</Text> : null}
+          {changes ? (
+            <Text variant="caption" tone="muted">{t('rsvp.unsaved', { count: changes })}</Text>
+          ) : queued ? (
+            <Text variant="caption" tone="default" testID="rsvp-queued">{t('rsvp.queued')}</Text>
+          ) : saved ? (
+            <Text variant="caption" tone="success">{t('rsvp.saved')}</Text>
+          ) : null}
           <Button label={t('rsvp.save')} disabled={!changes} loading={save.isPending} onPress={submit} testID="rsvp-save" />
         </View>
       }

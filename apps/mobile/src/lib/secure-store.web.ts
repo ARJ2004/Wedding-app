@@ -1,4 +1,4 @@
-export type SecureKey = 'host' | 'guest' | 'install';
+export type SecureKey = 'host' | 'guest' | 'install' | 'cachekey';
 
 /** Web preview only: sessionStorage (the real app uses the OS keychain). */
 const k = (key: SecureKey) => `mehfil.secure.${key}`;

@@ -207,6 +207,22 @@ if (want('guest-')) {
     await page.getByTestId('gtab-home').click();
     await page.waitForTimeout(1200);
     await shot(page, 'guest-06-home-after-rsvp');
+
+    // Venue with no signal: the home still shows, and an RSVP change is kept on the phone.
+    await ctx.setOffline(true);
+    await page.getByTestId('gtab-rsvp').click();
+    await page.locator('[data-testid$="-declined"]').first().click();
+    await page.getByTestId('rsvp-save').click();
+    await page.getByTestId('rsvp-queued').waitFor();
+    await shot(page, 'guest-07-offline-rsvp-queued');
+    await page.getByTestId('gtab-home').click();
+    await page.waitForTimeout(800);
+    await shot(page, 'guest-08-offline-home');
+    await ctx.setOffline(false);
+    await page.waitForFunction(() => !document.querySelector('[data-testid="rsvp-queued"]') || true);
+    await page.getByTestId('gtab-rsvp').click();
+    await page.getByTestId('rsvp-queued').waitFor({ state: 'detached', timeout: 40_000 }); // outbox retries every 30 s
+    await shot(page, 'guest-09-back-online-sent');
     await ctx.close();
   }
 }

@@ -211,5 +211,6 @@
   "me.withdraw": "Withdraw consent and sign out",
   "me.signOut": "Sign out of this invite",
   "rsvp.allYes": "Everyone's coming to everything",
-  "rsvp.allYesHint": "Fills in Yes for every person and event. You can change any answer before saving."
+  "rsvp.allYesHint": "Fills in Yes for every person and event. You can change any answer before saving.",
+  "rsvp.queued": "Saved on your phone. It will be sent when you are back online."
 }
