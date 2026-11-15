@@ -1,6 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import { normalisePhone } from '@mehfil/domain';
 import { deriveLinkToken, linkTokenHash } from '../src/common/auth/link-token';
+import { loadConfig } from '../src/config/env';
+import { createWhatsAppProvider, TemplateService } from '../src/modules/messaging';
+import pino from 'pino';
 
 const LINK_KEY = process.env.LINK_TOKEN_KEY ?? 'dev-only-link-token-key-change-me-0123456789';
 
@@ -154,6 +157,9 @@ export async function seed(prisma: PrismaClient, log: (line: string) => void = (
     if (p < 3) await prisma.party_groups.create({ data: { party_id: party.id, group_id: groups.vip.id } });
     if (p < 5) links.push(`  ${party.label.padEnd(18)} /g/${token}`);
   }
+
+  // Message templates (MSG-02); the dev log sink approves them straight away.
+  await new TemplateService(prisma, createWhatsAppProvider(loadConfig(), prisma), pino({ level: 'silent' })).syncCatalogue();
 
   log(`Seeded wedding "${wedding.title}" (${wedding.id}) with 6 events and 40 parties.`);
   log('Dev sign-in (DEV_AUTH_ENABLED=true): ' + DEV_USERS.map((u) => `dev:${u.email}`).join(', '));

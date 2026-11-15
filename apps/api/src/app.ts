@@ -26,7 +26,7 @@ import { opsRoutes } from './modules/ops';
 import { orgRoutes } from './modules/team';
 import { weddingRoutes } from './modules/weddings';
 import { realtimeRoutes } from './modules/realtime';
-import { createWhatsAppProvider, webhookRouter } from './modules/messaging';
+import { createWhatsAppProvider, messagingRoutes, webhookRouter } from './modules/messaging';
 import { PgListener, prismaRtStore, RealtimeHub } from './common/sse';
 
 function packageVersion(): string {
@@ -101,6 +101,7 @@ export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = 
   const media = new MediaService(deps);
   mediaRoutes(ctx, media);
   importRoutes(ctx, new ImportService({ prisma: deps.prisma, jobs: deps.jobs, media, linkTokenKey: deps.config.LINK_TOKEN_KEY }), deps.prisma);
+  messagingRoutes(ctx, { prisma: deps.prisma, providerName: whatsapp.name });
   opsRoutes(ctx, { prisma: deps.prisma, jobs: deps.jobs, opsAdmins });
   app.use(ctx.router);
 

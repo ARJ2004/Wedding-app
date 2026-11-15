@@ -18,7 +18,8 @@
     "db:reset": "tsx --env-file-if-exists=.env scripts/db-reset.ts",
     "db:seed": "tsx --env-file-if-exists=.env scripts/seed-dev.ts",
     "postinstall": "prisma generate",
-    "prisma:drift": "prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --shadow-database-url \"$SHADOW_DATABASE_URL\" --exit-code"
+    "prisma:drift": "prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --shadow-database-url \"$SHADOW_DATABASE_URL\" --exit-code",
+    "msg:templates": "tsx --env-file-if-exists=.env scripts/msg-templates.ts"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^8.1.0",

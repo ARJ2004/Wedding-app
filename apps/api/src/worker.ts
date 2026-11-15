@@ -6,13 +6,20 @@ import { createLogger } from './common/logger';
 import { createObjectStore } from './common/object-store';
 import { ImportService } from './modules/guests/import';
 import { MediaService } from './modules/media';
+import { createWhatsAppProvider, TemplateService } from './modules/messaging';
+import type { AppConfig } from './config/env';
+import type { Logger } from 'pino';
 import { initSentry, Metrics } from './common/observability';
 
 /** Every job the worker runs. Modules add their `jobs()` here as they land. */
-export function allJobs(deps: { prisma: PrismaClient; jobs: PgBossJobQueue; objectStore: ReturnType<typeof createObjectStore>; linkTokenKey: string }): JobDefinition[] {
+export function allJobs(deps: { prisma: PrismaClient; jobs: PgBossJobQueue; objectStore: ReturnType<typeof createObjectStore>; linkTokenKey: string; templates: TemplateService }): JobDefinition[] {
   const media = new MediaService(deps);
   const imports = new ImportService({ prisma: deps.prisma, jobs: deps.jobs, media, linkTokenKey: deps.linkTokenKey });
-  return [...housekeepingJobs(deps.prisma), ...Object.values(media.jobs), ...Object.values(imports.jobs)] as JobDefinition[];
+  return [...housekeepingJobs(deps.prisma), ...Object.values(media.jobs), ...Object.values(imports.jobs), ...Object.values(deps.templates.jobs)] as JobDefinition[];
+}
+
+export function templateService(config: AppConfig, prisma: PrismaClient, logger: Logger) {
+  return new TemplateService(prisma, createWhatsAppProvider(config, prisma), logger);
 }
 
 async function main() {
@@ -25,7 +32,10 @@ async function main() {
   const queue = PgBossJobQueue.create(config.DATABASE_URL, logger);
   queue.onOutcome = (q, outcome) => metrics.jobs.inc({ queue: q, outcome });
   await queue.boss.start();
-  const jobs = allJobs({ prisma, jobs: queue, objectStore: createObjectStore(config), linkTokenKey: config.LINK_TOKEN_KEY });
+  const templates = templateService(config, prisma, logger);
+  // Catalogue rows follow the code on every deploy (idempotent); approval comes from the provider.
+  logger.info(await templates.syncCatalogue(), 'message templates synced');
+  const jobs = allJobs({ prisma, jobs: queue, objectStore: createObjectStore(config), linkTokenKey: config.LINK_TOKEN_KEY, templates });
   await queue.register(jobs);
   logger.info({ jobs: jobs.map((j) => j.name) }, 'worker started');
 
