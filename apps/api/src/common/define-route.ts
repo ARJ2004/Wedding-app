@@ -23,6 +23,8 @@ interface RouteSpec<P extends ZodTypeAny, Q extends ZodTypeAny, B extends ZodTyp
   auth: RouteAuth;
   /** Wedding-scoped host routes: the `can()` action checked after loading membership from :weddingId. */
   permission?: Action;
+  /** Guest routes require the core consent unless set to false (sign-in, session, consent itself). */
+  consent?: false;
   /** Extra middleware after auth/permission, e.g. idempotent(). */
   before?: RequestHandler[];
   request?: { params?: P; query?: Q; body?: B };
@@ -52,6 +54,7 @@ export function defineRoute<
   const { router, registry, guards } = ctx;
   const errorStatuses = new Set([400, 500, ...(spec.errors ?? [])]);
   if (spec.auth !== 'public') errorStatuses.add(401);
+  if (spec.auth === 'guest' && spec.consent !== false) errorStatuses.add(403);
   if (spec.permission) {
     errorStatuses.add(403);
     errorStatuses.add(404);
@@ -88,7 +91,10 @@ export function defineRoute<
 
   const chain: RequestHandler[] = [];
   if (spec.auth === 'host') chain.push(guards.authHost);
-  if (spec.auth === 'guest') throw new Error(`guest auth arrives with ACC; route ${spec.path}`);
+  if (spec.auth === 'guest') {
+    chain.push(guards.authGuest);
+    if (spec.consent !== false) chain.push(guards.requireConsent('core'));
+  }
   if (spec.permission) {
     if (spec.auth !== 'host') throw new Error(`permission needs host auth: ${spec.path}`);
     chain.push(guards.requirePermission(spec.permission));

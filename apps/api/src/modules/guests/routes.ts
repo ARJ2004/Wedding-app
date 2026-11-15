@@ -14,13 +14,14 @@ import {
   UpdateGuestSchema,
   UpdatePartySchema,
 } from './schemas';
+import { linkHashFor } from '../../common/auth/link-token';
 import { groupRoutes } from './groups';
 import { GuestsService, type Actor } from './service';
 
 const actor = (req: Request): Actor => ({ userId: req.principal!.userId, role: req.membership!.role, requestId: String(req.id) });
 
-export function guestRoutes(ctx: RouteContext, deps: { prisma: PrismaClient }) {
-  const svc = new GuestsService(deps.prisma);
+export function guestRoutes(ctx: RouteContext, deps: { prisma: PrismaClient; linkTokenKey: string }) {
+  const svc = new GuestsService(deps.prisma, (id) => linkHashFor(deps.linkTokenKey, id));
   const W = '/v1/weddings/:weddingId';
 
   defineRoute(ctx, {

@@ -13,6 +13,7 @@ import { createGuards } from './common/auth/guards';
 import { TokenService } from './common/auth/tokens';
 import { createVerifiers, type IdTokenVerifier } from './common/auth/verifiers';
 import type { RouteContext } from './common/define-route';
+import { AccessService, accessRoutes } from './modules/access';
 import { authRoutes } from './modules/auth';
 import { guestRoutes } from './modules/guests';
 import { importRoutes, ImportService } from './modules/guests/import';
@@ -58,6 +59,7 @@ export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = 
   app.use(express.json({ limit: '256kb' }));
   app.use(limit(deps.config.RATE_LIMIT_PER_MINUTE));
   app.use('/v1/auth', limit(deps.config.AUTH_RATE_LIMIT_PER_MINUTE, 'AUTH_RATE_LIMITED'));
+  app.use('/v1/guest/auth', limit(deps.config.AUTH_RATE_LIMIT_PER_MINUTE, 'ACC_RATE_LIMITED'));
 
   const tokens = new TokenService(deps.prisma, deps.config);
   const ctx: RouteContext = { router: Router(), registry, guards: createGuards({ prisma: deps.prisma, tokens }) };
@@ -65,11 +67,12 @@ export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = 
   healthRoutes(ctx, deps, version);
   authRoutes(ctx, { prisma: deps.prisma, tokens, verifiers: opts.verifiers ?? createVerifiers(deps.config), opsAdmins });
   weddingRoutes(ctx, deps);
-  guestRoutes(ctx, deps);
+  guestRoutes(ctx, { prisma: deps.prisma, linkTokenKey: deps.config.LINK_TOKEN_KEY });
   orgRoutes(ctx, deps);
+  accessRoutes(ctx, new AccessService(deps.prisma, tokens, deps.config, deps.logger));
   const media = new MediaService(deps);
   mediaRoutes(ctx, media);
-  importRoutes(ctx, new ImportService({ prisma: deps.prisma, jobs: deps.jobs, media }), deps.prisma);
+  importRoutes(ctx, new ImportService({ prisma: deps.prisma, jobs: deps.jobs, media, linkTokenKey: deps.config.LINK_TOKEN_KEY }), deps.prisma);
   opsRoutes(ctx, { prisma: deps.prisma, jobs: deps.jobs, opsAdmins });
   app.use(ctx.router);
 

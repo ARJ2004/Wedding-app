@@ -13,6 +13,9 @@ const prod = {
   SENTRY_DSN: 'https://key@sentry.example/1',
   S3_BUCKET: 'mehfil-prod',
   S3_REGION: 'ap-south-1',
+  LINK_TOKEN_KEY: 'l'.repeat(40),
+  OTP_PEPPER: 'o'.repeat(40),
+  PII_HASH_KEY: 'p'.repeat(40),
 };
 
 function problemsFor(env: Record<string, string>): string[] {
@@ -60,6 +63,7 @@ describe('loadConfig', () => {
     ['SENTRY_DSN', '', 'SENTRY_DSN is required in production'],
     ['S3_BUCKET', '', 'S3_BUCKET is required in production'],
     ['S3_REGION', '', 'S3_REGION is required in production'],
+    ['LINK_TOKEN_KEY', 'dev-only-link-token-key-change-me-0123456789', 'LINK_TOKEN_KEY must be set to a real secret in production'],
   ])('refuses to boot in production when %s=%s', (key, value, message) => {
     expect(problemsFor({ ...prod, [key]: value })).toEqual([message]);
   });

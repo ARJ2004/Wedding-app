@@ -9,9 +9,9 @@ import { MediaService } from './modules/media';
 import { initSentry, Metrics } from './common/observability';
 
 /** Every job the worker runs. Modules add their `jobs()` here as they land. */
-export function allJobs(deps: { prisma: PrismaClient; jobs: PgBossJobQueue; objectStore: ReturnType<typeof createObjectStore> }): JobDefinition[] {
+export function allJobs(deps: { prisma: PrismaClient; jobs: PgBossJobQueue; objectStore: ReturnType<typeof createObjectStore>; linkTokenKey: string }): JobDefinition[] {
   const media = new MediaService(deps);
-  const imports = new ImportService({ prisma: deps.prisma, jobs: deps.jobs, media });
+  const imports = new ImportService({ prisma: deps.prisma, jobs: deps.jobs, media, linkTokenKey: deps.linkTokenKey });
   return [...housekeepingJobs(deps.prisma), ...Object.values(media.jobs), ...Object.values(imports.jobs)] as JobDefinition[];
 }
 
@@ -25,7 +25,7 @@ async function main() {
   const queue = PgBossJobQueue.create(config.DATABASE_URL, logger);
   queue.onOutcome = (q, outcome) => metrics.jobs.inc({ queue: q, outcome });
   await queue.boss.start();
-  const jobs = allJobs({ prisma, jobs: queue, objectStore: createObjectStore(config) });
+  const jobs = allJobs({ prisma, jobs: queue, objectStore: createObjectStore(config), linkTokenKey: config.LINK_TOKEN_KEY });
   await queue.register(jobs);
   logger.info({ jobs: jobs.map((j) => j.name) }, 'worker started');
 

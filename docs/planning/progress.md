@@ -69,10 +69,10 @@ Tracked by the Ralph loop (`.claude/ralph/PROMPT.md`). Status: `todo`, `doing`, 
 | APP-02 | Deep and universal links | 3 | todo | |
 | APP-04 | Offline cache and mutation outbox | 3 | todo | |
 | FND-14 | (new, absorbs ARR-05) Realtime infra | 3 | todo | |
-| PRV-01 | Notice and consent records | 3 | todo | |
-| ACC-01 | Personal link | 3 | todo | |
-| ACC-02a | New-device OTP (app) | 5 | todo | |
-| ACC-04 | Consent capture | 3 | todo | |
+| PRV-01 | Notice and consent records | 3 | done | privacy_notices + texts (draft guest-2027.1 seeded by migration, sha256 of what was shown), consents with notice version/source/locale, GET /v1/guest/privacy-notice. Needs counsel review of the notice text (VAL-13). |
+| ACC-01 | Personal link | 3 | done | Derived 128-bit invite links (HMAC of party id + version, only sha256 stored), set on create/import/seed; host GET link + rotate (signs all devices out). API done; app link sharing UI with MSG. |
+| ACC-02a | New-device OTP (app) | 5 | done | API: /v1/guest/auth/start (first names + masked phones only), /otp (dev code 000000, nothing sent; 503 until MSG wires WhatsApp/SMS), /verify (HMAC+pepper, 5 attempts, install-bound, party lock after 10 fails → 423), guest_devices with trust ≤ 90 d / wedding+31 d, /refresh (rotation, reuse detection), /logout, /session. Deviation: guest refresh/logout are /v1/guest/auth/* (typed responses) instead of the shared FND routes. App screens next iteration. Needs credentials: Meta WhatsApp OTP template, DLT SMS. |
+| ACC-04 | Consent capture | 3 | done | Consent gate: guest routes require core consent (403 ACC_CONSENT_REQUIRED) except sign-in/session/consent; PUT/DELETE /v1/guest/consents/:purpose (withdrawing core signs the device out). Deviation: DB check per request instead of a token claim (simpler; revisit at OPS-01). |
 | SET-04 | Event visibility by group | 3 | todo | |
 | GH-01 | Guest-mode shell (was "PWA shell") | 2 | todo | |
 | GH-02 | Personal schedule + home aggregate | 5 | todo | |

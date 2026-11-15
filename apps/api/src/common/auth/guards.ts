@@ -16,10 +16,18 @@ export interface Membership {
   implicit: boolean;
 }
 
+export interface GuestPrincipal {
+  guestId: string;
+  partyId: string;
+  weddingId: string;
+  deviceId: string;
+}
+
 declare module 'express-serve-static-core' {
   interface Request {
     principal?: HostPrincipal;
     membership?: Membership;
+    guest?: GuestPrincipal;
   }
 }
 
@@ -77,7 +85,32 @@ export function createGuards(deps: { prisma: PrismaClient; tokens: TokenService 
       next();
     };
 
-  return { authHost, requirePermission };
+  /**
+   * Guest JWT (aud=guest, separate secret, so a guest token can never pass authHost) plus a live
+   * device check: a host revoking a device or rotating the link ends access immediately.
+   */
+  const authGuest: RequestHandler = async (req, _res, next) => {
+    const token = bearer(req);
+    if (!token) throw new AppError('AUTH_UNAUTHENTICATED', 'Open your invite link again', 401);
+    const c = deps.tokens.verifyGuestAccess(token);
+    const device = await deps.prisma.guest_devices.findUnique({ where: { id: c.sid }, select: { revoked_at: true, trusted_until: true } });
+    if (!device || device.revoked_at || device.trusted_until < new Date()) {
+      throw new AppError('ACC_DEVICE_EXPIRED', 'Open your invite link again', 401);
+    }
+    req.guest = { guestId: c.sub, partyId: c.pid, weddingId: c.wid, deviceId: c.sid };
+    next();
+  };
+
+  /** Guests must have an active consent for the purpose (PRV-01); 403 tells the app to show the notice. */
+  const requireConsent =
+    (purpose: 'core' | 'photos' | 'face_match' | 'id_documents'): RequestHandler =>
+    async (req, _res, next) => {
+      const ok = await deps.prisma.consents.count({ where: { guest_id: req.guest!.guestId, purpose, withdrawn_at: null } });
+      if (!ok) throw new AppError('ACC_CONSENT_REQUIRED', 'Please read and accept how we use your details', 403, { purpose });
+      next();
+    };
+
+  return { authHost, authGuest, requireConsent, requirePermission };
 }
 
 export type Guards = ReturnType<typeof createGuards>;

@@ -1,6 +1,8 @@
-import { createHash, randomBytes } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import { normalisePhone } from '@mehfil/domain';
+import { deriveLinkToken, linkTokenHash } from '../src/common/auth/link-token';
+
+const LINK_KEY = process.env.LINK_TOKEN_KEY ?? 'dev-only-link-token-key-change-me-0123456789';
 
 /**
  * Dev seed (FND-15): dev users for each role, one planner org, one demo wedding with venues,
@@ -20,7 +22,6 @@ const LAST = ['Sharma', 'Iyer', 'Reddy', 'Patil', 'Gowda', 'Nair', 'Mehta', 'Kul
 
 /** IST wall-clock → UTC Date. */
 const ist = (isoLocal: string) => new Date(`${isoLocal}+05:30`);
-const sha256 = (s: string) => createHash('sha256').update(s).digest();
 
 export async function seed(prisma: PrismaClient, log: (line: string) => void = () => undefined) {
   if (process.env.NODE_ENV === 'production') throw new Error('refusing to seed in production');
@@ -119,17 +120,18 @@ export async function seed(prisma: PrismaClient, log: (line: string) => void = (
     const last = LAST[p % LAST.length]!;
     const size = 1 + (p % 4);
     const primaryName = `${FIRST[p % FIRST.length]} ${last}`;
-    const token = randomBytes(16).toString('base64url');
     const party = await prisma.parties.create({
       data: {
         wedding_id: wedding.id,
         label: size > 1 ? `${primaryName} & family` : primaryName,
-        link_token_hash: sha256(token),
         plus_ones_allowed: p % 5 === 0 ? 1 : 0,
         is_outstation: p % 3 !== 0,
         preferred_language: p % 7 === 0 ? 'hi' : p % 11 === 0 ? 'kn' : 'en',
       },
     });
+    // Derived invite link (ACC-01): the same key + party id + version always rebuilds it.
+    const token = deriveLinkToken(LINK_KEY, party.id, 1);
+    await prisma.parties.update({ where: { id: party.id }, data: { link_token_hash: linkTokenHash(token) } });
     for (let g = 0; g < size; g++) {
       await prisma.guests.create({
         data: {

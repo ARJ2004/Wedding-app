@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { ImportMapping, normaliseRow, rowStatus, suggestMapping, type NormalisedRow, type WeddingRole } from '@mehfil/domain';
 import { z } from 'zod';
+import { linkHashFor } from '../../../common/auth/link-token';
 import { csvRow } from '../../../common/csv';
 import { AppError } from '../../../common/errors';
 import { defineJob, type JobQueue } from '../../../common/jobs';
@@ -12,6 +13,7 @@ interface Deps {
   prisma: PrismaClient;
   jobs: JobQueue;
   media: MediaService;
+  linkTokenKey: string;
 }
 
 const PREVIEW_ROWS = 20;
@@ -261,6 +263,7 @@ export class ImportService {
               updated_by: job.created_by,
             },
           });
+          await tx.parties.update({ where: { id: party.id }, data: { link_token_hash: linkHashFor(this.deps.linkTokenKey, party.id) } });
           const groups = new Set<string>();
           for (const [i, r] of create.entries()) {
             const n = r.normalized as unknown as NormalisedRow;

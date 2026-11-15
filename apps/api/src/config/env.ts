@@ -18,6 +18,16 @@ const EnvSchema = z.object({
   JWT_HOST_SECRET: z.string().min(32),
   JWT_GUEST_SECRET: z.string().min(32),
   DEV_AUTH_ENABLED: bool.default(false),
+  /** Fixed guest OTP when DEV_AUTH_ENABLED (nothing is sent). */
+  DEV_OTP_CODE: z.string().regex(/^\d{6}$/).default('000000'),
+  /** Derives guest link tokens (ACC §2). Rotating it invalidates every guest link. */
+  LINK_TOKEN_KEY: z.string().min(32).default('dev-only-link-token-key-change-me-0123456789'),
+  /** Pepper for OTP code hashes. */
+  OTP_PEPPER: z.string().min(32).default('dev-only-otp-pepper-change-me-0123456789abcd'),
+  /** HMAC key for phone/IP fingerprints used in rate limits (never stored in clear). */
+  PII_HASH_KEY: z.string().min(32).default('dev-only-pii-hash-key-change-me-0123456789ab'),
+  /** Public base for guest links: https://mehfil.app/g/<token> */
+  GUEST_LINK_BASE: z.string().default('https://mehfil.app/g/'),
   OBJECT_STORE: z.enum(['s3', 'minio', 'fake', 'local']).default('s3'),
   /** OBJECT_STORE=local (dev without Docker): objects as files, shared by API and worker. */
   LOCAL_STORE_DIR: z.string().default('.data/objects'),
@@ -66,6 +76,9 @@ function productionProblems(c: AppConfig): string[] {
   if (c.MESSAGING_PROVIDER === 'log') problems.push('MESSAGING_PROVIDER=log is not allowed in production');
   if (c.OPENAPI_DOCS) problems.push('OPENAPI_DOCS must be false in production');
   if (!c.GOOGLE_WEB_CLIENT_ID) problems.push('GOOGLE_WEB_CLIENT_ID is required in production');
+  for (const k of ['LINK_TOKEN_KEY', 'OTP_PEPPER', 'PII_HASH_KEY'] as const) {
+    if (c[k].startsWith('dev-only-')) problems.push(`${k} must be set to a real secret in production`);
+  }
   if (!c.SENTRY_DSN) problems.push('SENTRY_DSN is required in production');
   if (!c.S3_BUCKET) problems.push('S3_BUCKET is required in production');
   if (!c.S3_REGION) problems.push('S3_REGION is required in production');

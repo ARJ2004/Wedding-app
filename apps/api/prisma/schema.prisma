@@ -40,15 +40,21 @@ model audit_log {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model consents {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  wedding_id     String    @db.Uuid
-  guest_id       String    @db.Uuid
-  purpose        String
-  notice_version String
-  granted_at     DateTime  @default(now()) @db.Timestamptz(6)
-  withdrawn_at   DateTime? @db.Timestamptz(6)
-  guests         guests    @relation(fields: [guest_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  weddings       weddings  @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                                           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wedding_id                                   String          @db.Uuid
+  guest_id                                     String          @db.Uuid
+  purpose                                      String
+  notice_version                               String
+  granted_at                                   DateTime        @default(now()) @db.Timestamptz(6)
+  withdrawn_at                                 DateTime?       @db.Timestamptz(6)
+  source                                       String          @default("guest_app")
+  locale                                       String          @default("en")
+  recorded_by_guest_id                         String?         @db.Uuid
+  withdrawn_source                             String?
+  guests                                       guests          @relation(fields: [guest_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  privacy_notices                              privacy_notices @relation(fields: [notice_version], references: [version], onDelete: NoAction, onUpdate: NoAction, map: "consents_notice_fk")
+  guests_consents_recorded_by_guest_idToguests guests?         @relation("consents_recorded_by_guest_idToguests", fields: [recorded_by_guest_id], references: [id], onUpdate: NoAction)
+  weddings                                     weddings        @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([guest_id, purpose], map: "consents_guest_idx")
 }
@@ -65,25 +71,28 @@ model event_groups {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model events {
-  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  wedding_id   String         @db.Uuid
-  venue_id     String?        @db.Uuid
-  kind         String         @default("custom")
-  name         String
-  starts_at    DateTime       @db.Timestamptz(6)
-  ends_at      DateTime?      @db.Timestamptz(6)
-  dress_code   String?
-  notes        String?
-  sort_order   Int            @default(0)
-  visibility   String         @default("all")
-  created_at   DateTime       @default(now()) @db.Timestamptz(6)
-  updated_at   DateTime       @default(now()) @db.Timestamptz(6)
-  deleted_at   DateTime?      @db.Timestamptz(6)
-  updated_by   String?        @db.Uuid
-  event_groups event_groups[]
-  users        users?         @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  venues       venues?        @relation(fields: [venue_id], references: [id], onUpdate: NoAction)
-  weddings     weddings       @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wedding_id     String         @db.Uuid
+  venue_id       String?        @db.Uuid
+  kind           String         @default("custom")
+  name           String
+  starts_at      DateTime       @db.Timestamptz(6)
+  ends_at        DateTime?      @db.Timestamptz(6)
+  dress_code     String?
+  notes          String?
+  sort_order     Int            @default(0)
+  visibility     String         @default("all")
+  created_at     DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime       @default(now()) @db.Timestamptz(6)
+  deleted_at     DateTime?      @db.Timestamptz(6)
+  updated_by     String?        @db.Uuid
+  rsvp_enabled   Boolean        @default(true)
+  rsvp_closes_at DateTime?      @db.Timestamptz(6)
+  event_groups   event_groups[]
+  users          users?         @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  venues         venues?        @relation(fields: [venue_id], references: [id], onUpdate: NoAction)
+  weddings       weddings       @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  rsvps          rsvps[]
 
   @@index([wedding_id, starts_at], map: "events_wedding_idx")
 }
@@ -125,6 +134,10 @@ model guests {
   merged_into_guest_id                                                  String?                      @db.Uuid
   updated_by                                                            String?                      @db.Uuid
   consents                                                              consents[]
+  consents_consents_recorded_by_guest_idToguests                        consents[]                   @relation("consents_recorded_by_guest_idToguests")
+  guest_devices_guest_devices_active_guest_idToguests                   guest_devices[]              @relation("guest_devices_active_guest_idToguests")
+  guest_devices_guest_devices_verified_guest_idToguests                 guest_devices[]              @relation("guest_devices_verified_guest_idToguests")
+  guest_dietary                                                         guest_dietary?
   guest_duplicate_dismissals_guest_duplicate_dismissals_guest_aToguests guest_duplicate_dismissals[] @relation("guest_duplicate_dismissals_guest_aToguests")
   guest_duplicate_dismissals_guest_duplicate_dismissals_guest_bToguests guest_duplicate_dismissals[] @relation("guest_duplicate_dismissals_guest_bToguests")
   guests                                                                guests?                      @relation("guestsToguests", fields: [merged_into_guest_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -135,8 +148,11 @@ model guests {
   import_rows_import_rows_match_guest_idToguests                        import_rows[]                @relation("import_rows_match_guest_idToguests")
   import_rows_import_rows_result_guest_idToguests                       import_rows[]                @relation("import_rows_result_guest_idToguests")
   media_objects                                                         media_objects[]
+  otp_challenges                                                        otp_challenges[]
   push_devices                                                          push_devices[]
   refresh_tokens                                                        refresh_tokens[]
+  rsvps_rsvps_guest_idToguests                                          rsvps[]                      @relation("rsvps_guest_idToguests")
+  rsvps_rsvps_responded_by_guest_idToguests                             rsvps[]                      @relation("rsvps_responded_by_guest_idToguests")
 
   @@index([full_name(ops: raw("gin_trgm_ops"))], map: "guests_name_trgm_idx", type: Gin)
   @@index([party_id], map: "guests_party_idx")
@@ -215,30 +231,36 @@ model organizations {
 }
 
 model parties {
-  id                   String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  wedding_id           String         @db.Uuid
+  id                   String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wedding_id           String            @db.Uuid
   label                String
-  link_token_hash      Bytes?         @unique
-  link_rotated_at      DateTime?      @db.Timestamptz(6)
-  plus_ones_allowed    Int            @default(0)
-  is_outstation        Boolean        @default(false)
-  preferred_language   String         @default("en")
-  created_at           DateTime       @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime       @default(now()) @db.Timestamptz(6)
-  deleted_at           DateTime?      @db.Timestamptz(6)
+  link_token_hash      Bytes?            @unique
+  link_rotated_at      DateTime?         @db.Timestamptz(6)
+  plus_ones_allowed    Int               @default(0)
+  is_outstation        Boolean           @default(false)
+  preferred_language   String            @default("en")
+  created_at           DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime          @default(now()) @db.Timestamptz(6)
+  deleted_at           DateTime?         @db.Timestamptz(6)
   city                 String?
   notes                String?
-  source               String         @default("manual")
-  import_job_id        String?        @db.Uuid
-  merged_into_party_id String?        @db.Uuid
-  updated_by           String?        @db.Uuid
+  source               String            @default("manual")
+  import_job_id        String?           @db.Uuid
+  merged_into_party_id String?           @db.Uuid
+  updated_by           String?           @db.Uuid
+  link_version         Int               @default(1)
+  link_revoked_at      DateTime?         @db.Timestamptz(6)
+  guest_devices        guest_devices[]
   guests               guests[]
-  import_jobs          import_jobs?   @relation(fields: [import_job_id], references: [id], onUpdate: NoAction, map: "parties_import_job_fk")
-  parties              parties?       @relation("partiesToparties", fields: [merged_into_party_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_parties        parties[]      @relation("partiesToparties")
-  users                users?         @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  weddings             weddings       @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  otp_challenges       otp_challenges[]
+  import_jobs          import_jobs?      @relation(fields: [import_job_id], references: [id], onUpdate: NoAction, map: "parties_import_job_fk")
+  parties              parties?          @relation("partiesToparties", fields: [merged_into_party_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_parties        parties[]         @relation("partiesToparties")
+  users                users?            @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  weddings             weddings          @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  party_auth_state     party_auth_state?
   party_groups         party_groups[]
+  rsvps                rsvps[]
 
   @@index([label(ops: raw("gin_trgm_ops"))], map: "parties_label_trgm_idx", type: Gin)
 }
@@ -322,10 +344,15 @@ model users {
   organization_members                                 organization_members[]
   organizations                                        organizations[]
   parties                                              parties[]
+  platform_staff_platform_staff_granted_byTousers      platform_staff[]             @relation("platform_staff_granted_byTousers")
+  platform_staff_platform_staff_user_idTousers         platform_staff?              @relation("platform_staff_user_idTousers")
   push_devices                                         push_devices[]
   refresh_tokens                                       refresh_tokens[]
+  rsvp_chase_runs                                      rsvp_chase_runs[]
+  rsvps                                                rsvps[]
   team_invitations_team_invitations_accepted_byTousers team_invitations[]           @relation("team_invitations_accepted_byTousers")
   team_invitations_team_invitations_invited_byTousers  team_invitations[]           @relation("team_invitations_invited_byTousers")
+  user_policy_acceptances                              user_policy_acceptances[]
   wedding_members_wedding_members_invited_byTousers    wedding_members[]            @relation("wedding_members_invited_byTousers")
   wedding_members_wedding_members_user_idTousers       wedding_members[]            @relation("wedding_members_user_idTousers")
   weddings                                             weddings[]
@@ -389,9 +416,15 @@ model weddings {
   cover_media_id                                       String?                      @db.Uuid
   settings_version                                     Int                          @default(1)
   updated_by                                           String?                      @db.Uuid
+  retention_extended_until                             DateTime?                    @db.Timestamptz(6)
+  deletion_requested_at                                DateTime?                    @db.Timestamptz(6)
+  purge_after                                          DateTime?                    @db.Timestamptz(6)
+  purged_at                                            DateTime?                    @db.Timestamptz(6)
   audit_log                                            audit_log[]
   consents                                             consents[]
   events                                               events[]
+  guest_devices                                        guest_devices[]
+  guest_dietary                                        guest_dietary[]
   guest_duplicate_dismissals                           guest_duplicate_dismissals[]
   guest_groups                                         guest_groups[]
   guests                                               guests[]
@@ -399,13 +432,18 @@ model weddings {
   import_jobs                                          import_jobs[]
   import_rows                                          import_rows[]
   media_objects                                        media_objects[]
+  otp_challenges                                       otp_challenges[]
   parties                                              parties[]
+  party_auth_state                                     party_auth_state[]
   realtime_events                                      realtime_events[]
   refresh_tokens                                       refresh_tokens[]
+  rsvp_chase_runs                                      rsvp_chase_runs[]
+  rsvps                                                rsvps[]
   team_invitations                                     team_invitations[]
   venues                                               venues[]
   wedding_contacts                                     wedding_contacts[]
   wedding_members                                      wedding_members[]
+  wedding_retention_state                              wedding_retention_state[]
   media_objects_weddings_cover_media_idTomedia_objects media_objects?               @relation("weddings_cover_media_idTomedia_objects", fields: [cover_media_id], references: [id], onUpdate: NoAction)
   users                                                users                        @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   organizations                                        organizations                @relation(fields: [organization_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -517,4 +555,265 @@ model wedding_contacts {
   weddings     weddings @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([wedding_id, sort_order], map: "wedding_contacts_wedding_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model data_request_steps {
+  request_id    String        @db.Uuid
+  module        String
+  seq           Int
+  status        String        @default("pending")
+  attempts      Int           @default(0)
+  result        Json?
+  error         String?
+  started_at    DateTime?     @db.Timestamptz(6)
+  finished_at   DateTime?     @db.Timestamptz(6)
+  data_requests data_requests @relation(fields: [request_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([request_id, module])
+  @@unique([request_id, seq])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model data_requests {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wedding_id         String?              @db.Uuid
+  kind               String
+  scope              String
+  subject_id         String               @db.Uuid
+  requested_by_type  String
+  requested_by_id    String?              @db.Uuid
+  channel            String
+  status             String               @default("scheduled")
+  not_before         DateTime             @default(now()) @db.Timestamptz(6)
+  due_at             DateTime             @db.Timestamptz(6)
+  started_at         DateTime?            @db.Timestamptz(6)
+  completed_at       DateTime?            @db.Timestamptz(6)
+  contact_hash       Bytes?
+  export_s3_key      String?
+  export_expires_at  DateTime?            @db.Timestamptz(6)
+  rejection_reason   String?
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
+  data_request_steps data_request_steps[]
+  erasure_ledger     erasure_ledger[]
+
+  @@index([wedding_id, created_at(sort: Desc)], map: "data_requests_wedding_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model erasure_ledger {
+  id            BigInt         @id @default(autoincrement())
+  request_id    String?        @db.Uuid
+  wedding_id    String?        @db.Uuid
+  scope         String
+  subject_id    String?        @db.Uuid
+  data_classes  String[]       @default([])
+  reason        String
+  erased_at     DateTime       @default(now()) @db.Timestamptz(6)
+  mirrored_at   DateTime?      @db.Timestamptz(6)
+  data_requests data_requests? @relation(fields: [request_id], references: [id], onUpdate: NoAction)
+
+  @@index([erased_at], map: "erasure_ledger_erased_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model guest_devices {
+  id                                             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wedding_id                                     String    @db.Uuid
+  party_id                                       String    @db.Uuid
+  install_id                                     String
+  platform                                       String
+  app_version                                    String?
+  client_summary                                 String?
+  verified_guest_id                              String    @db.Uuid
+  active_guest_id                                String    @db.Uuid
+  verified_at                                    DateTime  @default(now()) @db.Timestamptz(6)
+  trusted_until                                  DateTime  @db.Timestamptz(6)
+  last_seen_at                                   DateTime  @default(now()) @db.Timestamptz(6)
+  revoked_at                                     DateTime? @db.Timestamptz(6)
+  revoke_reason                                  String?
+  created_at                                     DateTime  @default(now()) @db.Timestamptz(6)
+  guests_guest_devices_active_guest_idToguests   guests    @relation("guest_devices_active_guest_idToguests", fields: [active_guest_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  parties                                        parties   @relation(fields: [party_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  guests_guest_devices_verified_guest_idToguests guests    @relation("guest_devices_verified_guest_idToguests", fields: [verified_guest_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  weddings                                       weddings  @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([verified_guest_id], map: "guest_devices_guest_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model guest_dietary {
+  guest_id   String   @id @db.Uuid
+  wedding_id String   @db.Uuid
+  diet       String?
+  allergies  String[] @default([])
+  notes      String?
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  guests     guests   @relation(fields: [guest_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  weddings   weddings @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([wedding_id, guest_id, diet], map: "guest_dietary_wedding_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model otp_challenges {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wedding_id   String    @db.Uuid
+  party_id     String    @db.Uuid
+  guest_id     String    @db.Uuid
+  install_id   String
+  platform     String
+  phone_hmac   Bytes
+  ip_hmac      Bytes?
+  channel      String
+  code_hmac    Bytes
+  attempts     Int       @default(0) @db.SmallInt
+  max_attempts Int       @default(5) @db.SmallInt
+  status       String    @default("pending")
+  delivery_id  String?   @db.Uuid
+  expires_at   DateTime  @db.Timestamptz(6)
+  resolved_at  DateTime? @db.Timestamptz(6)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  guests       guests    @relation(fields: [guest_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  parties      parties   @relation(fields: [party_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  weddings     weddings  @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at], map: "otp_created_brin", type: Brin)
+  @@index([party_id, created_at(sort: Desc)], map: "otp_party_recent_idx")
+  @@index([phone_hmac, created_at(sort: Desc)], map: "otp_phone_recent_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model party_auth_state {
+  party_id          String    @id @db.Uuid
+  wedding_id        String    @db.Uuid
+  failed_verifies   Int       @default(0)
+  window_started_at DateTime? @db.Timestamptz(6)
+  locked_until      DateTime? @db.Timestamptz(6)
+  lock_count        Int       @default(0)
+  updated_at        DateTime  @default(now()) @db.Timestamptz(6)
+  parties           parties   @relation(fields: [party_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  weddings          weddings  @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model platform_staff {
+  user_id                                String   @id @db.Uuid
+  staff_role                             String
+  granted_by                             String?  @db.Uuid
+  created_at                             DateTime @default(now()) @db.Timestamptz(6)
+  users_platform_staff_granted_byTousers users?   @relation("platform_staff_granted_byTousers", fields: [granted_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_platform_staff_user_idTousers    users    @relation("platform_staff_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model privacy_notice_texts {
+  version         String
+  locale          String
+  title           String
+  body_md         String
+  sha256          Bytes
+  privacy_notices privacy_notices @relation(fields: [version], references: [version], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([version, locale])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model privacy_notices {
+  version                 String                    @id
+  audience                String
+  purposes                String[]
+  changes_summary         String?
+  requires_reconsent      Boolean                   @default(false)
+  effective_from          DateTime                  @db.Timestamptz(6)
+  published_at            DateTime?                 @db.Timestamptz(6)
+  created_at              DateTime                  @default(now()) @db.Timestamptz(6)
+  consents                consents[]
+  privacy_notice_texts    privacy_notice_texts[]
+  user_policy_acceptances user_policy_acceptances[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model retention_runs {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  job              String
+  dry_run          Boolean   @default(false)
+  status           String    @default("running")
+  started_at       DateTime  @default(now()) @db.Timestamptz(6)
+  finished_at      DateTime? @db.Timestamptz(6)
+  weddings_touched Int       @default(0)
+  objects_deleted  Int       @default(0)
+  bytes_freed      BigInt    @default(0)
+  rows_deleted     Int       @default(0)
+  errors           Int       @default(0)
+  details          Json?
+
+  @@index([job, started_at(sort: Desc)], map: "retention_runs_job_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model rsvp_chase_runs {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wedding_id      String   @db.Uuid
+  event_ids       String[] @db.Uuid
+  no_reply_days   Int
+  party_ids       String[] @db.Uuid
+  message_id      String?  @db.Uuid
+  idempotency_key String
+  created_by      String   @db.Uuid
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  users           users    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  weddings        weddings @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([wedding_id, idempotency_key])
+  @@index([wedding_id, created_at(sort: Desc)], map: "rsvp_chase_runs_wedding_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model rsvps {
+  id                                         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wedding_id                                 String   @db.Uuid
+  event_id                                   String   @db.Uuid
+  party_id                                   String   @db.Uuid
+  guest_id                                   String   @db.Uuid
+  status                                     String
+  source                                     String
+  responded_by_guest_id                      String?  @db.Uuid
+  responded_by_user_id                       String?  @db.Uuid
+  host_note                                  String?
+  responded_at                               DateTime @default(now()) @db.Timestamptz(6)
+  updated_at                                 DateTime @default(now()) @db.Timestamptz(6)
+  events                                     events   @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  guests_rsvps_guest_idToguests              guests   @relation("rsvps_guest_idToguests", fields: [guest_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  parties                                    parties  @relation(fields: [party_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  guests_rsvps_responded_by_guest_idToguests guests?  @relation("rsvps_responded_by_guest_idToguests", fields: [responded_by_guest_id], references: [id], onUpdate: NoAction)
+  users                                      users?   @relation(fields: [responded_by_user_id], references: [id], onUpdate: NoAction)
+  weddings                                   weddings @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([event_id, guest_id])
+  @@index([guest_id], map: "rsvps_guest_idx")
+  @@index([wedding_id, event_id, guest_id, status], map: "rsvps_headcount_idx")
+  @@index([party_id, event_id], map: "rsvps_party_idx")
+}
+
+model user_policy_acceptances {
+  user_id         String          @db.Uuid
+  notice_version  String
+  accepted_at     DateTime        @default(now()) @db.Timestamptz(6)
+  privacy_notices privacy_notices @relation(fields: [notice_version], references: [version], onDelete: NoAction, onUpdate: NoAction)
+  users           users           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_id, notice_version])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model wedding_retention_state {
+  wedding_id  String    @db.Uuid
+  data_class  String
+  expires_at  DateTime  @db.Timestamptz(6)
+  done_at     DateTime? @db.Timestamptz(6)
+  last_run_id String?   @db.Uuid
+  weddings    weddings  @relation(fields: [wedding_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([wedding_id, data_class])
 }

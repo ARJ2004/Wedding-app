@@ -68,7 +68,11 @@ function phoneFields(phone: string | null | undefined) {
 const PARTY_INCLUDE = { guests: true, party_groups: { select: { group_id: true } } } as const;
 
 export class GuestsService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    /** Builds parties.link_token_hash for a new party (ACC-01). */
+    private readonly linkHash: (partyId: string) => Buffer,
+  ) {}
 
   private async checkGroups(db: Prisma.TransactionClient, weddingId: string, groupIds: string[]) {
     if (groupIds.length === 0) return;
@@ -135,6 +139,7 @@ export class GuestsService {
           updated_by: actor.userId,
         },
       });
+      await tx.parties.update({ where: { id: party.id }, data: { link_token_hash: this.linkHash(party.id) } });
       for (const m of members) {
         await tx.guests.create({
           data: {
