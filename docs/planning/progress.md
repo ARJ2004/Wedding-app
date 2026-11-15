@@ -58,8 +58,8 @@ Tracked by the Ralph loop (`.claude/ralph/PROMPT.md`). Status: `todo`, `doing`, 
 | SET-05 | Key contacts | 1 | done | Key contacts: CRUD + reorder, max 10, phone validated/normalised, audit masks phones. App: list + add in Wedding settings. |
 | SET-06 | Wedding settings + cover | 3 | done | Settings: versioned Zod schema in packages/domain (camera, language, branding.palette, guests), GET/PATCH deep merge + strict validation + audit. Deviation: branding = one of the contrast-tested palettes (design-tokens) instead of a free accent colour. Cover photo via upload purpose "cover" → PATCH coverMediaId (same wedding, uploaded) → coverUrl. App: Wedding settings (cover, shots, reveal, language, palette applied to the app theme). Fixed: PATCH /weddings reset timezone/cities via schema defaults. |
 | CAM-01a | Upload core | 2 | done | media module: upload policy registry (cover, import), POST /v1/weddings/:id/uploads → presigned PUT, POST /v1/uploads/:id/complete (HEAD + size check) → media.process job. Needs credentials: S3 bucket (MinIO/fake in dev). |
-| APP-05a | Store release pipeline | 3 | todo | |
-| OPS-04a | Device lab setup (S4) | 1 | todo | |
+| APP-05a | Store release pipeline | 3 | done | Android: upload-key signing from gradle props/env, CI version name/code, Fastlane (bundle, internal, promote), .github/workflows/mobile.yml (release-bundle check on PRs, assembleDebug, tag → signed AAB → Play internal), docs/release-signing.md. Release JS bundle builds (2.2 MB) and is checked for dev-only code — fixed: Metro could not resolve hoisted deps, zod needed a Babel plugin, dev sign-in leaked into release. Needs credentials: Play org account, upload keystore, Play service account, Google OAuth Android clients. Native build not run here (no Android SDK). |
+| OPS-04a | Device lab setup (S4) | 1 | done | docs/ops/device-lab.md: 4-device matrix with budget, 15-minute release checklist. Needs purchase (devices) and Sentry DSN for release health. |
 
 ## S4 · 11 – 24 Jan 2027 · A guest opens their link and RSVPs
 

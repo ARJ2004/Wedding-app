@@ -10,7 +10,8 @@ import { Button, Card, Screen, Text, TextField } from '../../ui';
 export function WelcomeScreen({ onGuest }: { onGuest: () => void }) {
   const t = useT();
   const { signIn, error } = useSession();
-  const [email, setEmail] = useState('owner@mehfil.local');
+  // Prefilled only in dev builds; __DEV__ folds to false in release so the seed email never ships.
+  const [email, setEmail] = useState(__DEV__ ? 'owner@mehfil.local' : '');
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const s = useStyles((th) => ({
@@ -63,10 +64,11 @@ export function WelcomeScreen({ onGuest }: { onGuest: () => void }) {
             {t('welcome.googleUnavailable')}
           </Text>
         ) : null}
-        {config.showDevSignIn ? (
+        {/* `__DEV__ &&` (not a config flag) so the minifier removes the whole block from release builds. */}
+        {__DEV__ && config.showDevSignIn ? (
           <>
             <TextField
-              label={t('welcome.devEmail')}
+              label="Dev sign-in email"
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -74,7 +76,7 @@ export function WelcomeScreen({ onGuest }: { onGuest: () => void }) {
               testID="dev-email"
             />
             <Button
-              label={t('welcome.devButton')}
+              label="Sign in (dev)"
               variant="secondary"
               loading={busy}
               onPress={() => run(async () => `dev:${email.trim()}`)}

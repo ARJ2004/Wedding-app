@@ -1,0 +1,35 @@
+# APP-05 store release pipeline (docs/architecture/25-app.md). Run from apps/mobile.
+# Android:  bundle exec fastlane android internal   (needs: upload keystore + Play service account)
+# iOS lanes (match/gym/pilot) arrive with APP-05b in S7.
+default_platform(:android)
+
+platform :android do
+  desc "Build a signed release bundle (AAB)"
+  lane :bundle do
+    gradle(project_dir: "android", task: "bundle", build_type: "Release")
+  end
+
+  desc "Upload to the Play internal testing track (pilot testers)"
+  lane :internal do
+    bundle
+    supply(
+      track: "internal",
+      aab: lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH],
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      release_status: "completed"
+    )
+  end
+
+  desc "Promote internal → closed testing (pilots), then production with a staged rollout"
+  lane :promote do |options|
+    supply(
+      track: options[:from] || "internal",
+      track_promote_to: options[:to] || "alpha",
+      rollout: options[:rollout],
+      skip_upload_aab: true,
+      skip_upload_metadata: true
+    )
+  end
+end

@@ -1,0 +1,69 @@
+name: Mobile
+
+on:
+  pull_request:
+    paths: ['apps/mobile/**', 'packages/**', 'pnpm-lock.yaml', '.github/workflows/mobile.yml']
+  push:
+    tags: ['mobile-v*']
+
+permissions:
+  contents: read
+
+jobs:
+  release-bundle:
+    name: Release JS bundle has no dev code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @mehfil/mobile run check:release
+
+  android-debug:
+    name: Android debug build
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+      - run: pnpm install --frozen-lockfile
+      - run: ./gradlew assembleDebug --no-daemon
+        working-directory: apps/mobile/android
+
+  android-internal:
+    name: Play internal testing
+    if: startsWith(github.ref, 'refs/tags/mobile-v')
+    needs: release-bundle
+    runs-on: ubuntu-latest
+    environment: play-internal # holds the secrets below; requires approval
+    env:
+      MEHFIL_VERSION_NAME: ${{ github.ref_name }}
+      MEHFIL_VERSION_CODE: ${{ github.run_number }}
+      MEHFIL_UPLOAD_STORE_FILE: ${{ github.workspace }}/upload.keystore
+      MEHFIL_UPLOAD_STORE_PASSWORD: ${{ secrets.MEHFIL_UPLOAD_STORE_PASSWORD }}
+      MEHFIL_UPLOAD_KEY_ALIAS: ${{ secrets.MEHFIL_UPLOAD_KEY_ALIAS }}
+      MEHFIL_UPLOAD_KEY_PASSWORD: ${{ secrets.MEHFIL_UPLOAD_KEY_PASSWORD }}
+      MEHFIL_PLAY_JSON_KEY: ${{ github.workspace }}/play.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: ruby/setup-ruby@v1
+        with: { ruby-version: '3.3', bundler-cache: true, working-directory: apps/mobile }
+      - run: pnpm install --frozen-lockfile
+      - name: Write signing key and Play credentials (never logged)
+        run: |
+          echo "${{ secrets.MEHFIL_UPLOAD_KEYSTORE_BASE64 }}" | base64 -d > "$MEHFIL_UPLOAD_STORE_FILE"
+          echo "${{ secrets.MEHFIL_PLAY_JSON_KEY }}" > "$MEHFIL_PLAY_JSON_KEY"
+      - run: bundle exec fastlane android internal
+        working-directory: apps/mobile

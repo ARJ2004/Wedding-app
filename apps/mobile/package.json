@@ -11,7 +11,8 @@
     "test": "jest",
     "preview": "vite --config preview/vite.config.ts",
     "preview:build": "vite build --config preview/vite.config.ts",
-    "preview:shots": "node preview/shots.mjs"
+    "preview:shots": "node preview/shots.mjs",
+    "check:release": "scripts/check-release-bundle.sh"
   },
   "dependencies": {
     "@mehfil/api-client": "workspace:*",
@@ -56,7 +57,8 @@
     "react-native-web": "^0.21.0",
     "react-test-renderer": "19.3.0",
     "typescript": "^6.0.3",
-    "vite": "^6.4.0"
+    "vite": "^6.4.0",
+    "@babel/plugin-transform-export-namespace-from": "^7.25.0"
   },
   "engines": {
     "node": ">= 22.11.0"

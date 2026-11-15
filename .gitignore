@@ -10,3 +10,7 @@ coverage/
 .claude/ralph-loop.local.md
 .claude/settings.local.json
 apps/api/.data/
+*.keystore
+!apps/mobile/android/app/debug.keystore
+*.jks
+play.json
