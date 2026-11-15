@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient, guests, parties } from '@prisma/client';
 import { can, normalisePhone, type WeddingRole } from '@mehfil/domain';
 import type { z } from 'zod';
+import { csvRow } from '../../common/csv';
 import { AppError } from '../../common/errors';
 import { diff, writeAudit } from '../audit';
 import type { AddGuestSchema, CreatePartySchema, ListPartiesQuery, UpdateGuestSchema, UpdatePartySchema } from './schemas';
@@ -318,6 +319,30 @@ export class GuestsService {
       });
       return toParty(await this.loadParty(tx, weddingId, g.party_id), actor.role);
     });
+  }
+
+  /**
+   * GST-07a export: one row per guest. Roles without guest.contact.read never reach this route
+   * (guest.export). Cells are guarded against CSV/formula injection.
+   */
+  async exportCsv(weddingId: string): Promise<string> {
+    const parties = await this.prisma.parties.findMany({
+      where: { wedding_id: weddingId, deleted_at: null },
+      include: { guests: { where: { deleted_at: null } }, party_groups: { include: { guest_groups: { select: { name: true } } } } },
+      orderBy: [{ label: 'asc' }],
+    });
+    const header = ['Party', 'Name', 'Primary', 'Phone', 'Phone status', 'Email', 'Age', 'Relation', 'Groups', 'City', 'Travelling', 'Language', 'Plus-ones'];
+    const lines = [csvRow(header)];
+    for (const p of parties) {
+      const groups = p.party_groups.map((g) => g.guest_groups.name).join('; ');
+      const members = [...p.guests].sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.created_at.getTime() - b.created_at.getTime());
+      for (const g of members) {
+        lines.push(
+          csvRow([p.label, g.full_name, g.is_primary ? 'yes' : '', g.phone_e164 ?? g.phone_raw, g.phone_status, g.email, g.age_band, g.relation, groups, p.city, p.is_outstation ? 'yes' : '', p.preferred_language, g.is_primary ? p.plus_ones_allowed : '']),
+        );
+      }
+    }
+    return `\uFEFF${lines.join('\n')}\n`; // BOM so Excel opens Hindi/Kannada names correctly
   }
 
   async groups(weddingId: string) {

@@ -14,6 +14,7 @@ import {
   UpdateGuestSchema,
   UpdatePartySchema,
 } from './schemas';
+import { groupRoutes } from './groups';
 import { GuestsService, type Actor } from './service';
 
 const actor = (req: Request): Actor => ({ userId: req.principal!.userId, role: req.membership!.role, requestId: String(req.id) });
@@ -32,6 +33,24 @@ export function guestRoutes(ctx: RouteContext, deps: { prisma: PrismaClient }) {
     request: { params: WeddingParams, query: ListPartiesQuery },
     response: { status: 200, schema: z.object({ items: z.array(PartySchema), nextCursor: z.string().uuid().nullable() }) },
     handler: ({ req, params, query }) => svc.list(params.weddingId, req.membership!.role, query),
+  });
+
+  defineRoute(ctx, {
+    method: 'get',
+    path: `${W}/parties/export.csv`,
+    summary: 'Guest list as CSV (one row per guest)',
+    tags: ['guests'],
+    auth: 'host',
+    permission: 'guest.export',
+    request: { params: WeddingParams },
+    response: { status: 200, schema: z.string() },
+    handler: async ({ params, res }) => {
+      const csv = await svc.exportCsv(params.weddingId);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="guest-list.csv"');
+      res.setHeader('Cache-Control', 'no-store');
+      res.send(csv);
+    },
   });
 
   defineRoute(ctx, {
@@ -117,6 +136,8 @@ export function guestRoutes(ctx: RouteContext, deps: { prisma: PrismaClient }) {
     response: { status: 200, schema: PartySchema },
     handler: ({ req, params }) => svc.removeGuest(actor(req), params.weddingId, params.guestId),
   });
+
+  groupRoutes(ctx, { prisma: deps.prisma, guests: svc });
 
   defineRoute(ctx, {
     method: 'get',

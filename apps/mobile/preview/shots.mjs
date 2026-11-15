@@ -113,6 +113,25 @@ if (want('palette-')) {
   }
 }
 
+if (want('groups-')) {
+  const { ctx, page } = await session();
+  await tab(page, 'tab-guests', 'screen-guests');
+  await page.getByTestId('new-group').click();
+  await page.getByTestId('group-name').fill('College friends');
+  await shot(page, 'groups-01-new-group');
+  await page.getByTestId('create-group').click();
+  await page.getByText('College friends · 0').waitFor();
+  await page.getByTestId('toggle-select').click();
+  const rows = page.locator('[data-testid^="select-"]');
+  await rows.nth(0).click();
+  await rows.nth(2).click();
+  await shot(page, 'groups-02-select');
+  await page.getByTestId('assign-College friends').click();
+  await page.getByText('College friends · 2').waitFor();
+  await shot(page, 'groups-03-assigned');
+  await ctx.close();
+}
+
 // Import flow last: it adds guests to the demo wedding.
 if (want('import-')) {
   const sample = path.resolve(here, '../../../docs/samples/guest-list-sample.xlsx');

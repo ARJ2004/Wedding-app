@@ -129,5 +129,14 @@
   "field.email": "Email",
   "field.relation": "Relation",
   "field.groups": "Groups",
-  "field.ignore": "Ignore"
+  "field.ignore": "Ignore",
+  "guests.newGroup": "+ New group",
+  "guests.groupName": "Group name",
+  "guests.createGroup": "Create group",
+  "guests.select": "Select",
+  "guests.doneSelecting": "Done",
+  "guests.selected": "{count, plural, one {# family selected} other {# families selected}}",
+  "guests.addToGroup": "Add to a group",
+  "guests.export": "Export CSV",
+  "guests.added": "Added to {group}"
 }

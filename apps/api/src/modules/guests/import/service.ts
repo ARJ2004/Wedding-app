@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { ImportMapping, normaliseRow, rowStatus, suggestMapping, type NormalisedRow, type WeddingRole } from '@mehfil/domain';
 import { z } from 'zod';
+import { csvRow } from '../../../common/csv';
 import { AppError } from '../../../common/errors';
 import { defineJob, type JobQueue } from '../../../common/jobs';
 import type { MediaService } from '../../media';
@@ -325,17 +326,11 @@ export class ImportService {
       where: { import_job_id: importId, status: { in: ['error', 'warning', 'duplicate'] } },
       orderBy: { row_number: 'asc' },
     });
-    const esc = (v: unknown) => {
-      const s = String(v ?? '');
-      // CSV-injection guard: never let a cell start a formula in Excel.
-      const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
-      return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
-    };
-    const lines = [['Row', 'Problem', ...headers].map(esc).join(',')];
+    const lines = [csvRow(['Row', 'Problem', ...headers])];
     for (const r of rows) {
       const problem = (r.issues as { code: string }[]).map((i) => i.code).join(' ') || r.status.toUpperCase();
       const raw = r.raw as Record<string, string>;
-      lines.push([r.row_number, problem, ...headers.map((h) => raw[h])].map(esc).join(','));
+      lines.push(csvRow([r.row_number, problem, ...headers.map((h) => raw[h])]));
     }
     return `${lines.join('\n')}\n`;
   }

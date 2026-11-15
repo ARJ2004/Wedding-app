@@ -53,8 +53,8 @@ Tracked by the Ralph loop (`.claude/ralph/PROMPT.md`). Status: `todo`, `doing`, 
 | GST-02a | Import pipeline + API | 5 | done | Import pipeline: xlsx (cached formula values only) / csv (BOM), Hinglish header suggestions, mapping → validate job (normalise, party grouping, members cell, kids), preview rows, actions, idempotent commit job (resumable batches, groups/sides), errors.csv (CSV-injection safe), cancel, one import per wedding. |
 | GST-02b | Import mobile flow | 3 | done | App import flow: file picker (native document picker / web input), presigned upload, mapping chips (current choice first), live progress polling, preview stats + problem rows, idempotent commit, done → guest list. Dev: OBJECT_STORE=local disk store shared by API + worker, dev-only upload sink. Sample sheet: docs/samples/guest-list-sample.xlsx. Screenshots: docs/screenshots/import-*. |
 | GST-05a | In-import duplicates | 1 | done | In-file duplicate phones and existing-guest phone matches flagged as duplicate (default skip, can merge). |
-| GST-06 | Groups and tags | 3 | todo | |
-| GST-07a | Search, filters, export | 3 | todo | |
+| GST-06 | Groups and tags | 3 | done | Groups: create/rename/recolour/delete (built-ins protected), bulk add/remove ≤500 parties (cross-wedding rejected), audit. App: "+ New group", Select mode → add selected families to a group. |
+| GST-07a | Search, filters, export | 3 | done | Search (name/label/last-4 digits) + group/phone filters were in GST-01; export.csv one row per guest with shared csvCell guard (keeps +91 phones intact, neutralises formulas), BOM for Indic names; desk staff 403. App: Export CSV (share sheet / download). RSVP/travel/arrival filters arrive with their epics (GST-07b). |
 | SET-05 | Key contacts | 1 | todo | |
 | SET-06 | Wedding settings + cover | 3 | todo | |
 | CAM-01a | Upload core | 2 | done | media module: upload policy registry (cover, import), POST /v1/weddings/:id/uploads → presigned PUT, POST /v1/uploads/:id/complete (HEAD + size check) → media.process job. Needs credentials: S3 bucket (MinIO/fake in dev). |
