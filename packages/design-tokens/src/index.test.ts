@@ -1,10 +1,12 @@
-import { contrastRatio, resolveTheme, TEXT_PAIRS, toCssVariables, type ColorScheme } from './index';
+import { contrastRatio, PALETTE_NAMES, resolveTheme, TEXT_PAIRS, toCssVariables, type ColorScheme } from './index';
 
 const schemes: ColorScheme[] = ['light', 'dark'];
 
 describe('design tokens', () => {
-  it.each(schemes)('%s text pairs meet WCAG AA (4.5:1)', (scheme) => {
-    const { colors } = resolveTheme({ scheme });
+  const combos = PALETTE_NAMES.flatMap((palette) => schemes.map((scheme) => [palette, scheme] as const));
+
+  it.each(combos)('%s %s text pairs meet WCAG AA (4.5:1)', (palette, scheme) => {
+    const { colors } = resolveTheme({ scheme, palette });
     for (const [fg, bg] of TEXT_PAIRS) {
       expect({ pair: `${fg}/${bg}`, ratio: contrastRatio(colors[fg], colors[bg]) >= 4.5 }).toEqual({
         pair: `${fg}/${bg}`,
@@ -13,8 +15,8 @@ describe('design tokens', () => {
     }
   });
 
-  it.each(schemes)('%s high-contrast body text reaches 7:1 (AAA)', (scheme) => {
-    const { colors } = resolveTheme({ scheme, highContrast: true });
+  it.each(combos)('%s %s high-contrast body text reaches 7:1 (AAA)', (palette, scheme) => {
+    const { colors } = resolveTheme({ scheme, palette, highContrast: true });
     expect(contrastRatio(colors.text, colors.background)).toBeGreaterThanOrEqual(7);
     expect(contrastRatio(colors.textMuted, colors.background)).toBeGreaterThanOrEqual(7);
   });
