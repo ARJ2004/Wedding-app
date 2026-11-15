@@ -117,25 +117,26 @@ export async function seed(prisma: PrismaClient, log: (line: string) => void = (
   const links: string[] = [];
   for (let p = 0; p < 40; p++) {
     const last = LAST[p % LAST.length]!;
+    const size = 1 + (p % 4);
+    const primaryName = `${FIRST[p % FIRST.length]} ${last}`;
     const token = randomBytes(16).toString('base64url');
     const party = await prisma.parties.create({
       data: {
         wedding_id: wedding.id,
-        label: `${last} family`,
+        label: size > 1 ? `${primaryName} & family` : primaryName,
         link_token_hash: sha256(token),
         plus_ones_allowed: p % 5 === 0 ? 1 : 0,
         is_outstation: p % 3 !== 0,
         preferred_language: p % 7 === 0 ? 'hi' : p % 11 === 0 ? 'kn' : 'en',
       },
     });
-    const size = 1 + (p % 4);
     for (let g = 0; g < size; g++) {
       await prisma.guests.create({
         data: {
           wedding_id: wedding.id,
           party_id: party.id,
           is_primary: g === 0,
-          full_name: `${FIRST[(p + g * 3) % FIRST.length]} ${last}`,
+          full_name: g === 0 ? primaryName : `${FIRST[(p + g * 5 + 1) % FIRST.length]} ${last}`,
           // Fictional demo numbers, normalised exactly like a host entry (GST-04).
           ...(() => {
             const n = normalisePhone(g < 2 ? `+91 90000 ${String(p * 10 + g).padStart(5, '0')}` : null);

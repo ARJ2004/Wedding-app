@@ -1,0 +1,14 @@
+{
+  "extends": "@react-native/typescript-config",
+  "compilerOptions": {
+    "types": ["jest"],
+    "paths": {
+      "@mehfil/domain": ["../../packages/domain/src"],
+      "@mehfil/design-tokens": ["../../packages/design-tokens/src"],
+      "@mehfil/i18n": ["../../packages/i18n/src"],
+      "@mehfil/api-client": ["../../packages/api-client/src"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["**/node_modules", "**/Pods", "preview"]
+}

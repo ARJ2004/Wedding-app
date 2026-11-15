@@ -36,3 +36,19 @@ The sprint plan is built story by story by the Ralph loop (`ralph-loop@claude-pl
 ```
 /ralph-loop:ralph-loop "$(cat .claude/ralph/PROMPT.md)" --completion-promise "SPRINT RANGE COMPLETE" --max-iterations 30
 ```
+
+## App preview and screenshots
+
+There is no Android emulator or iOS Simulator in the cloud sandbox, so the React Native app is also rendered with React Native Web for review:
+
+```bash
+pnpm --filter @mehfil/api dev            # API with the dev bypass (restart it after pnpm db:reset)
+pnpm --filter @mehfil/mobile preview     # http://localhost:5173 — phone layout in a browser
+pnpm --filter @mehfil/mobile preview:shots   # writes docs/screenshots/*.png (light, dark, desk staff, large text, palettes)
+```
+
+On a Mac or a machine with Android Studio, run the real app with `pnpm --filter @mehfil/mobile ios` / `android`.
+
+## Theme
+
+The whole look comes from `packages/design-tokens`: pick the palette in `src/theme.config.ts`, add or tweak palettes in `src/palettes.ts` (every palette is contrast-tested). Designs: see `docs/design/README.md`.
