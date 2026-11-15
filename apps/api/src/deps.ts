@@ -4,6 +4,7 @@ import type { AppConfig } from './config/env';
 import type { JobQueue } from './common/jobs';
 import type { ObjectStore } from './common/object-store';
 import type { Metrics } from './common/observability';
+import type { RealtimeHub } from './common/sse';
 
 /**
  * Everything a module needs, built once in main.ts / worker.ts / tests and passed down.
@@ -17,4 +18,6 @@ export interface Deps {
   jobs: JobQueue;
   /** Optional so tests and scripts can skip it. */
   metrics?: Metrics;
+  /** SSE hub; createApp builds one on DATABASE_URL when absent (LISTEN starts on the first stream). */
+  realtime?: RealtimeHub;
 }

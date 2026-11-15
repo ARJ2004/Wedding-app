@@ -8525,6 +8525,114 @@
         }
       }
     },
+    "/v1/weddings/{weddingId}/stream": {
+      "get": {
+        "summary": "Realtime event stream (Server-Sent Events)",
+        "tags": [
+          "realtime"
+        ],
+        "security": [
+          {
+            "hostAuth": []
+          },
+          {
+            "guestAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "weddingId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Comma-separated channel names, e.g. headcount,debug.ping"
+            },
+            "required": true,
+            "description": "Comma-separated channel names, e.g. headcount,debug.ping",
+            "name": "channels",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "last-event-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "text/event-stream of {id, channel, kind, payload}",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/guest/rsvp": {
       "get": {
         "summary": "My party: invited events × members with their answers and diets",

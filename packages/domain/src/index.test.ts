@@ -71,3 +71,16 @@ describe('time helpers', () => {
     expect(EVENT_PRESETS.map((p) => p.kind)).toEqual(['haldi', 'mehendi', 'sangeet', 'baraat', 'pheras', 'reception']);
   });
 });
+
+import { canSubscribe, isRealtimeChannel } from './realtime';
+
+describe('realtime channels (FND-14)', () => {
+  it('lets hosts and desk follow headcount, keeps guests off host channels', () => {
+    expect(canSubscribe('owner', 'headcount')).toBe(true);
+    expect(canSubscribe('desk_staff', 'headcount')).toBe(true);
+    expect(canSubscribe('guest', 'headcount')).toBe(false);
+    expect(canSubscribe('desk_staff', 'debug.ping')).toBe(true);
+    expect(isRealtimeChannel('headcount')).toBe(true);
+    expect(isRealtimeChannel('toString')).toBe(false);
+  });
+});

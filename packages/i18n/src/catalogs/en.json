@@ -48,6 +48,7 @@
   "tabs.more": "More",
   "home.days": "{days, plural, one {# day} other {# days}} to go",
   "home.today": "It's the wedding!",
+  "home.live": "Live",
   "home.parties": "Invites",
   "home.guests": "Guests",
   "home.events": "Events",

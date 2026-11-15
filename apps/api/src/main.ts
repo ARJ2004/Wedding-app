@@ -15,7 +15,7 @@ async function main() {
   const prisma = new PrismaClient();
   const jobs = PgBossJobQueue.create(config.DATABASE_URL, logger);
   await jobs.boss.start();
-  const { app } = createApp({ config, logger, prisma, jobs, metrics, objectStore: createObjectStore(config) });
+  const { app, realtime } = createApp({ config, logger, prisma, jobs, metrics, objectStore: createObjectStore(config) });
 
   const server = app.listen(config.PORT, () => {
     logger.info({ port: config.PORT, env: config.NODE_ENV, devAuth: config.DEV_AUTH_ENABLED }, 'api listening');
@@ -23,8 +23,9 @@ async function main() {
 
   const shutdown = (signal: string) => {
     logger.info({ signal }, 'shutting down');
+    void realtime.stop(); // ends open streams so server.close can finish
     server.close(() => {
-      void Promise.allSettled([jobs.boss.stop({ graceful: true }), prisma.$disconnect()]).finally(() => process.exit(0));
+      void Promise.allSettled([jobs.boss.stop({ graceful: true }), realtime.stop(), prisma.$disconnect()]).finally(() => process.exit(0));
     });
     setTimeout(() => process.exit(1), 10_000).unref();
   };

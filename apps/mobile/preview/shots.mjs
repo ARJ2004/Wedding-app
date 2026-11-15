@@ -253,5 +253,15 @@ if (want('import-')) {
   await ctx.close();
 }
 
+if (want('live-')) {
+  // FND-14: host home follows the headcount channel over SSE; the badge shows once the stream is open.
+  for (const scheme of ['light', 'dark']) {
+    const { ctx, page } = await session({ scheme });
+    await page.getByTestId('tag-live').waitFor({ timeout: 15000 });
+    await shot(page, `live-01-host-home-${scheme}`);
+    await ctx.close();
+  }
+}
+
 await browser.close();
 for (const c of children) c.kill();

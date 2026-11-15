@@ -1,7 +1,7 @@
 import { createServer, type Server } from 'node:http';
 import * as Sentry from '@sentry/node';
 import type { RequestHandler } from 'express';
-import { Counter, collectDefaultMetrics, Histogram, Registry } from 'prom-client';
+import { Counter, collectDefaultMetrics, Gauge, Histogram, Registry } from 'prom-client';
 
 /**
  * FND-08 observability. Metrics are labelled by route *template* (never the raw URL, which can
@@ -21,6 +21,16 @@ export class Metrics {
     name: 'mehfil_jobs_total',
     help: 'Background jobs by queue and outcome',
     labelNames: ['queue', 'outcome'] as const,
+    registers: [this.registry],
+  });
+  readonly sseConnections = new Gauge({
+    name: 'mehfil_sse_connections',
+    help: 'Open realtime (SSE) streams in this process',
+    registers: [this.registry],
+  });
+  readonly sseListenReconnects = new Counter({
+    name: 'mehfil_sse_listen_reconnects_total',
+    help: 'Times the LISTEN client reconnected',
     registers: [this.registry],
   });
 

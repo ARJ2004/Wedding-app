@@ -25,6 +25,8 @@ import { fakeS3Router } from './modules/dev/fake-s3';
 import { opsRoutes } from './modules/ops';
 import { orgRoutes } from './modules/team';
 import { weddingRoutes } from './modules/weddings';
+import { realtimeRoutes } from './modules/realtime';
+import { PgListener, prismaRtStore, RealtimeHub } from './common/sse';
 
 function packageVersion(): string {
   const pkg = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf8')) as { version: string };
@@ -72,6 +74,15 @@ export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = 
   guestRoutes(ctx, { prisma: deps.prisma, linkTokenKey: deps.config.LINK_TOKEN_KEY });
   orgRoutes(ctx, deps);
   accessRoutes(ctx, new AccessService(deps.prisma, tokens, deps.config, deps.logger));
+  const realtime =
+    deps.realtime ??
+    new RealtimeHub(
+      prismaRtStore(deps.prisma),
+      new PgListener(deps.config.DATABASE_URL, deps.logger, () => deps.metrics?.sseListenReconnects.inc()),
+      deps.logger,
+      { onCount: (n) => deps.metrics?.sseConnections.set(n) },
+    );
+  realtimeRoutes(ctx, { prisma: deps.prisma, tokens, hub: realtime });
   const rsvp = new RsvpService(deps.prisma);
   rsvpRoutes(ctx, rsvp);
   guestHomeRoutes(ctx, { prisma: deps.prisma, objectStore: deps.objectStore, rsvp });
@@ -92,5 +103,5 @@ export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = 
   app.use(notFoundHandler);
   app.use(errorHandler(deps.logger));
 
-  return { app, openApiDocument };
+  return { app, openApiDocument, realtime };
 }

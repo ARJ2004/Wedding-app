@@ -73,7 +73,7 @@ export function ToggleRow({ title, subtitle, value, onChange, testID }: { title:
   );
 }
 
-export function Tag({ label, tone = 'neutral' }: { label: string; tone?: 'neutral' | 'success' | 'warning' | 'danger' | 'primary' }) {
+export function Tag({ label, tone = 'neutral', testID }: { label: string; tone?: 'neutral' | 'success' | 'warning' | 'danger' | 'primary'; testID?: string }) {
   const s = useStyles((t) => ({
     tag: {
       alignSelf: 'flex-start',
@@ -92,7 +92,7 @@ export function Tag({ label, tone = 'neutral' }: { label: string; tone?: 'neutra
   }));
   const textTone = tone === 'neutral' ? 'muted' : tone === 'warning' ? 'default' : tone;
   return (
-    <View style={s.tag}>
+    <View style={s.tag} testID={testID}>
       <Text variant="caption" tone={textTone}>
         {label}
       </Text>

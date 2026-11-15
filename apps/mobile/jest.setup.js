@@ -15,3 +15,6 @@ jest.mock('react-native-mmkv', () => {
   const m = new Map();
   return { createMMKV: () => ({ getString: (k) => m.get(k), set: (k, v) => m.set(k, v), remove: (k) => m.delete(k) }) };
 });
+jest.mock('react-native-sse', () =>
+  jest.fn().mockImplementation(() => ({ addEventListener: jest.fn(), removeAllEventListeners: jest.fn(), close: jest.fn() })),
+);

@@ -5089,6 +5089,94 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/weddings/{weddingId}/stream': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Realtime event stream (Server-Sent Events) */
+    get: {
+      parameters: {
+        query: {
+          /** @description Comma-separated channel names, e.g. headcount,debug.ping */
+          channels: string;
+        };
+        header?: {
+          'last-event-id'?: string;
+        };
+        path: {
+          weddingId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description text/event-stream of {id, channel, kind, payload} */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'text/event-stream': string;
+          };
+        };
+        /** @description Error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/v1/guest/rsvp': {
     parameters: {
       query?: never;

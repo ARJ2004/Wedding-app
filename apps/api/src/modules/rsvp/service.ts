@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 import { AppError } from '../../common/errors';
 import { writeAudit } from '../audit';
+import { rtPublish } from '../../common/sse';
 import { listInvitedEvents } from '../weddings/visibility';
 
 export type RsvpStatus = 'attending' | 'declined' | 'maybe';
@@ -78,6 +79,11 @@ export class RsvpService {
         entityType: 'party',
         entityId: g.partyId,
         after: { answers: input.answers.length, diets: input.diets?.length ?? 0, source },
+      });
+      // Live headcount (RSV-03) refetches on this; ids only, never names or answers.
+      await rtPublish(tx, g.weddingId, 'headcount', 'rsvp.changed', {
+        partyId: g.partyId,
+        eventIds: [...new Set(input.answers.map((a) => a.eventId))],
       });
     });
     return this.partyState(g.partyId);
