@@ -37,7 +37,7 @@ Lets Mehfil charge the PRD prices: **Free** (25 guests, 10 shots per guest), **E
 
 ## 3. Data model
 
-DDL: [`sql/23-bil.sql`](./sql/23-bil.sql). References `000-core.sql` (and reuses `platform_staff` from `14-prv.sql` in code; no FK). **Schema check passed**: `scripts/check-schema.sh arch_bil 000-core.sql 14-prv.sql 18-pln.sql 23-bil.sql 24-gtm.sql` → OK (see report). Also applied in sequence after every other epic file present up to 24. EXPLAIN on 300 orgs × 5 lots: "pick lot to consume" uses `credit_lots_available_idx` (0.05 ms).
+DDL: [`sql/23-bil.sql`](./sql/23-bil.sql). References `000-core.sql` (and reuses `platform_staff` from `14-prv.sql` in code; no FK). **Schema check passed**: `scripts/check-schema.sh arch_bil 000-core.sql 14-prv.sql 18-pln.sql 23-bil.sql 24-gtm.sql` → `OK: 51 tables`; the full chain (000 → 27) → `OK: 136 tables`. EXPLAIN on 300 orgs × 5 lots: "pick lot to consume" uses `credit_lots_available_idx` (0.05 ms).
 
 | Table | Purpose | Notes |
 | --- | --- | --- |
@@ -63,7 +63,7 @@ DDL: [`sql/23-bil.sql`](./sql/23-bil.sql). References `000-core.sql` (and reuses
 
 | Module | Check | Where |
 | --- | --- | --- |
-| GST | `guests_max` | create guest, import commit (count + new rows, with the entitlements row locked `FOR UPDATE` in the import transaction) |
+| GST | `guests_max` | create guest, import commit (count + new rows, with the entitlements row locked `FOR UPDATE` in the import transaction). **Alternative pending PO** (24-gtm.md §13 #1): allow import, enforce at invite send (MSG) instead. |
 | CAM | `camera_shots_per_guest` | presign upload |
 | MSG | `messages_included` | BIL calls `messaging.setQuotaLimit(weddingId, units)` on every recompute; MSG keeps metering in its own `message_quotas` |
 | PRV | `photo_retention_months` | retention job computes `delete_after` |

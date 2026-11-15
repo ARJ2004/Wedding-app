@@ -30,7 +30,7 @@ Gives a planner agency one place to run all its weddings: an **org overview** wi
 
 ## 3. Data model
 
-DDL: [`sql/18-pln.sql`](./sql/18-pln.sql). References `000-core.sql` only. **Schema check passed**: `scripts/check-schema.sh arch_pln 000-core.sql 18-pln.sql` → `OK: 20 tables`; also passes in sequence with `23-bil.sql`, `24-gtm.sql` and every other epic file present up to 24 (excluding `14-prv.sql`, which currently clashes with `05-acc.sql`). EXPLAIN on 300 orgs × 40 weddings: the overview query (org's weddings ⨝ snapshots, ordered by `starts_on`) uses core `weddings_org_idx` + the snapshot PK, **0.3 ms**; no extra index needed.
+DDL: [`sql/18-pln.sql`](./sql/18-pln.sql). References `000-core.sql` only. **Schema check passed**: `scripts/check-schema.sh arch_pln 000-core.sql 18-pln.sql` → `OK: 20 tables`; the full chain (`scripts/check-schema.sh` with every file, 000 → 27) also passes → `OK: 136 tables`. EXPLAIN on 300 orgs × 40 weddings: the overview query (org's weddings ⨝ snapshots, ordered by `starts_on`) uses core `weddings_org_idx` + the snapshot PK, **0.3 ms**; no extra index needed.
 
 | Table / change | Purpose | Notes |
 | --- | --- | --- |
