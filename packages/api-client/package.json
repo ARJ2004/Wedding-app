@@ -1,0 +1,25 @@
+{
+  "name": "@mehfil/api-client",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Typed API client generated from apps/api's OpenAPI spec. Do not edit schema.d.ts by hand.",
+  "main": "dist/index.js",
+  "types": "src/index.ts",
+  "react-native": "src/index.ts",
+  "scripts": {
+    "generate": "openapi-typescript openapi.json -o src/schema.d.ts && prettier --write src/schema.d.ts --log-level warn",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'generated code, no lint'",
+    "test": "echo 'no tests'"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.13.4"
+  },
+  "devDependencies": {
+    "@mehfil/config": "workspace:*",
+    "openapi-typescript": "^7.5.2",
+    "prettier": "^3.4.0",
+    "typescript": "~5.7.2"
+  }
+}

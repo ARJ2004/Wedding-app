@@ -6,10 +6,10 @@ Tracked by the Ralph loop (`.claude/ralph/PROMPT.md`). Status: `todo`, `doing`, 
 
 | Story | Title | Pts | Status | Note |
 | --- | --- | --- | --- | --- |
-| FND-01 | Monorepo scaffold | 3 | todo | |
-| FND-02 | CI pipeline | 3 | todo | |
-| FND-03 | Local dev stack | 2 | todo | |
-| FND-12 | (new) App factory + API contract | 3 | todo | |
+| FND-01 | Monorepo scaffold | 3 | done | pnpm workspace, shared config, api/worker entry points. Husky/lint-staged deferred (CI enforces lint). |
+| FND-02 | CI pipeline | 3 | done | ci.yml: Postgres 16 service, lint, typecheck, unit, schema check, e2e, stale client, audit; Dependabot. Branch protection is a repo setting (human). |
+| FND-03 | Local dev stack | 2 | done | infra/docker-compose.dev.yml (Postgres + MinIO + bucket init), scripts/dev-db.sh, .env.example. |
+| FND-12 | (new) App factory + API contract | 3 | done | createApp, AppError + error handler, defineRoute → OpenAPI 3.1, /v1/health(+ready), /v1/docs non-prod, rate limit, request id, api-client generation. Idempotency middleware moved to S1 (needs FND-04 tables). |
 | SPIKE-1 | WhatsApp route comparison | 2 | human | Needs account sign-ups and pricing calls |
 | SPIKE-2 | RN camera cold-open on budget phones | 2 | blocked: needs physical devices | |
 
@@ -22,6 +22,7 @@ Tracked by the Ralph loop (`.claude/ralph/PROMPT.md`). Status: `todo`, `doing`, 
 | FND-09 | i18n framework | 3 | todo | |
 | FND-10 | Shared design system | 5 | todo | |
 | FND-13 | (new) ObjectStore | 2 | todo | |
+| FND-12b | Idempotency middleware + table (moved from FND-12) | 1 | todo | |
 | FND-15 | (new) Dev seed and demo wedding | 1 | todo | |
 
 ## S2 · 14 – 27 Dec 2026 · A host signs in and creates a wedding
