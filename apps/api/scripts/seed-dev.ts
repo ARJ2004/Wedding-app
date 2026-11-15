@@ -158,10 +158,17 @@ export async function seed(prisma: PrismaClient, log: (line: string) => void = (
     if (p < 5) links.push(`  ${party.label.padEnd(18)} /g/${token}`);
   }
 
+  // One family with a dead number, so failed deliveries show up in dev (log sink fails *99999).
+  const oldParty = await prisma.parties.create({ data: { wedding_id: wedding.id, label: 'Suresh Old-number', is_outstation: false } });
+  await prisma.parties.update({ where: { id: oldParty.id }, data: { link_token_hash: linkTokenHash(deriveLinkToken(LINK_KEY, oldParty.id, 1)) } });
+  const dead = normalisePhone('+91 90000 99999');
+  await prisma.guests.create({ data: { wedding_id: wedding.id, party_id: oldParty.id, is_primary: true, full_name: 'Suresh Menon', phone_e164: dead.e164, phone_status: dead.status } });
+  await prisma.party_groups.create({ data: { party_id: oldParty.id, group_id: groups.friends.id } });
+
   // Message templates (MSG-02); the dev log sink approves them straight away.
   await new TemplateService(prisma, createWhatsAppProvider(loadConfig(), prisma), pino({ level: 'silent' })).syncCatalogue();
 
-  log(`Seeded wedding "${wedding.title}" (${wedding.id}) with 6 events and 40 parties.`);
+  log(`Seeded wedding "${wedding.title}" (${wedding.id}) with 6 events and 41 parties.`);
   log('Dev sign-in (DEV_AUTH_ENABLED=true): ' + DEV_USERS.map((u) => `dev:${u.email}`).join(', '));
   log('Sample guest links (OTP 000000 in dev):');
   for (const l of links) log(l);

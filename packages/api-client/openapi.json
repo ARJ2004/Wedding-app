@@ -2778,6 +2778,117 @@
           "push"
         ]
       },
+      "MessageSummary": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "recipients": {
+            "type": "integer"
+          },
+          "suppressed": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "whatsapp": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "deliveredPct": {
+            "type": "integer"
+          },
+          "readPct": {
+            "type": "integer"
+          },
+          "sendingStartedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sentAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "messageId",
+          "status",
+          "recipients",
+          "suppressed",
+          "whatsapp",
+          "deliveredPct",
+          "readPct",
+          "sendingStartedAt",
+          "sentAt"
+        ]
+      },
+      "MessageDelivery": {
+        "type": "object",
+        "properties": {
+          "deliveryId": {
+            "type": "string"
+          },
+          "guestId": {
+            "type": "string"
+          },
+          "guestName": {
+            "type": "string"
+          },
+          "partyLabel": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "errorCode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "errorLabel": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "phoneMasked": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deliveryId",
+          "guestId",
+          "guestName",
+          "partyLabel",
+          "status",
+          "errorCode",
+          "errorLabel",
+          "phone",
+          "phoneMasked",
+          "updatedAt"
+        ]
+      },
       "FailedJob": {
         "type": "object",
         "properties": {
@@ -11791,6 +11902,337 @@
             }
           },
           "422": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/weddings/{weddingId}/messages/{messageId}/summary": {
+      "get": {
+        "summary": "Delivery counts for a sent message",
+        "tags": [
+          "messaging"
+        ],
+        "security": [
+          {
+            "hostAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "weddingId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "messageId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/weddings/{weddingId}/messages/{messageId}/deliveries": {
+      "get": {
+        "summary": "Deliveries for a message, e.g. ?status=failed",
+        "tags": [
+          "messaging"
+        ],
+        "security": [
+          {
+            "hostAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "weddingId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "messageId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "queued",
+                "sending",
+                "sent",
+                "delivered",
+                "read",
+                "failed",
+                "unknown"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MessageDelivery"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/weddings/{weddingId}/messages/{messageId}/retry-failed": {
+      "post": {
+        "summary": "Send the failed WhatsApp messages again",
+        "tags": [
+          "messaging"
+        ],
+        "security": [
+          {
+            "hostAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "weddingId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "messageId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "requeued": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "requeued"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
             "description": "Error",
             "content": {
               "application/json": {

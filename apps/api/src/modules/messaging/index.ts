@@ -10,3 +10,4 @@ export { messageRoutes, renderTemplate } from './messages';
 export { AudienceSpec, registerAudienceFilter, resolveAudience, type AudienceMember } from './audience';
 export { FanoutService, newReplyRef } from './fanout';
 export { TokenBucket, mapLimit } from './token-bucket';
+export { MessageStats, deliveryCounts, errorLabel } from './status';

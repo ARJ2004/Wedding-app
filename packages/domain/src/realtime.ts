@@ -19,6 +19,14 @@ export const REALTIME_CHANNELS = {
     guest: false,
     kinds: { 'rsvp.changed': z.object({ partyId: z.string().uuid(), eventIds: z.array(z.string().uuid()) }) },
   },
+  /** MSG-06: send progress for the host message-detail screen (counts only, no names or phones). */
+  messages: {
+    actions: ['message.read'] as Action[],
+    guest: false,
+    kinds: {
+      'msg.progress': z.object({ messageId: z.string().uuid(), status: z.string(), counts: z.record(z.string(), z.number().int()) }),
+    },
+  },
 } as const;
 
 export type RealtimeChannel = keyof typeof REALTIME_CHANNELS;

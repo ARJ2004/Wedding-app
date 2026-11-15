@@ -7,7 +7,7 @@ import { WelcomeScreen } from '../features/auth-host';
 import { EventsScreen } from '../features/events';
 import { ConsentScreen, GuestEntryFlow, GuestHomeScreen, GuestMeScreen, RsvpScreen } from '../features/guest';
 import { GuestsScreen, ImportScreen } from '../features/guests';
-import { ComposerScreen, MessagesScreen } from '../features/messages';
+import { ComposerScreen, MessageDetailScreen, MessagesScreen } from '../features/messages';
 import { can } from '@mehfil/domain';
 import { MoreScreen } from '../features/settings';
 import { CreateWeddingScreen, HostHomeScreen, useApplyWeddingPalette, useWedding, WeddingPickerScreen, WeddingSettingsScreen } from '../features/weddings';
@@ -21,7 +21,7 @@ type WelcomeStack = { Welcome: undefined };
 type GuestTabsList = { GuestHome: undefined; Rsvp: undefined; Me: undefined };
 type PickerStack = { Picker: undefined; CreateWedding: undefined };
 type HostTabs = { Home: undefined; Events: undefined; Guests: undefined; Messages: undefined; More: undefined };
-type MessagesStack = { MessageList: undefined; Composer: { messageId: string | null } };
+type MessagesStack = { MessageList: undefined; Composer: { messageId: string | null }; MessageDetail: { messageId: string } };
 type GuestsStack = { GuestList: undefined; Import: undefined };
 type MoreStack = { MoreHome: undefined; WeddingSettings: undefined };
 
@@ -36,8 +36,9 @@ function MessagesNavigator() {
   return (
     <Msgs.Navigator screenOptions={{ headerShown: false }}>
       <Msgs.Screen name="MessageList">
-        {({ navigation }) => <MessagesScreen onCompose={() => navigation.navigate('Composer', { messageId: null })} onOpen={(id) => navigation.navigate('Composer', { messageId: id })} />}
+        {({ navigation }) => <MessagesScreen onCompose={() => navigation.navigate('Composer', { messageId: null })} onOpen={(id, draft) => (draft ? navigation.navigate('Composer', { messageId: id }) : navigation.navigate('MessageDetail', { messageId: id }))} />}
       </Msgs.Screen>
+      <Msgs.Screen name="MessageDetail">{({ navigation, route }) => <MessageDetailScreen messageId={route.params.messageId} onBack={() => navigation.goBack()} />}</Msgs.Screen>
       <Msgs.Screen name="Composer">{({ navigation, route }) => <ComposerScreen messageId={route.params.messageId} onDone={() => navigation.goBack()} />}</Msgs.Screen>
     </Msgs.Navigator>
   );

@@ -16,8 +16,16 @@ const TONE: Record<Message['status'], 'neutral' | 'success' | 'warning' | 'dange
   failed: 'danger',
 };
 
+/** "52 of 70 delivered" from the stats the worker keeps on the message. */
+function deliveredLine(m: Message, t: ReturnType<typeof useT>) {
+  const c = (m.stats as { whatsapp?: Record<string, number> }).whatsapp;
+  if (!c) return null;
+  const total = Object.entries(c).reduce((n, [k, v]) => (k === 'cancelled' ? n : n + v), 0);
+  return total ? t('msg.deliveredOf', { done: (c.delivered ?? 0) + (c.read ?? 0), total }) : null;
+}
+
 /** Host Messages list (MSG-03): drafts first, then everything sent, newest first. */
-export function MessagesScreen({ onCompose, onOpen }: { onCompose: () => void; onOpen: (id: string) => void }) {
+export function MessagesScreen({ onCompose, onOpen }: { onCompose: () => void; onOpen: (id: string, draft: boolean) => void }) {
   const t = useT();
   const weddingId = useSession((s) => s.weddingId)!;
   const wedding = useWedding(weddingId).data;
@@ -37,9 +45,14 @@ export function MessagesScreen({ onCompose, onOpen }: { onCompose: () => void; o
           key={m.id}
           testID={`msg-row-${m.id}`}
           title={m.title || m.bodyText || t('msg.untitled')}
-          subtitle={wedding ? formatInZone(m.updatedAt, wedding.timezone, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : undefined}
+          subtitle={[
+            wedding ? formatInZone(m.updatedAt, wedding.timezone, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : null,
+            deliveredLine(m, t),
+          ]
+            .filter(Boolean)
+            .join(' · ')}
           trailing={<Tag label={t(`msg.status.${m.status}`)} tone={TONE[m.status]} />}
-          onPress={m.status === 'draft' ? () => onOpen(m.id) : undefined}
+          onPress={() => onOpen(m.id, m.status === 'draft')}
         />
       ))}
     </Screen>

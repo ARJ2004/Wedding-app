@@ -284,6 +284,13 @@ if (want('msg-')) {
       await page.getByTestId('msg-send').click();
       await page.getByText('Sent', { exact: true }).first().waitFor({ timeout: 30000 });
       await shot(page, 'msg-05-list-sent');
+      // MSG-06: detail with live counts and the failures list (the seeded dead number fails).
+      await page.locator('[data-testid^=msg-row-]').first().click();
+      await page.getByTestId('count-failed').waitFor();
+      await page.waitForTimeout(1500);
+      await shot(page, 'msg-06-detail');
+      await page.getByTestId('msg-retry').scrollIntoViewIfNeeded();
+      await shot(page, 'msg-07-failures');
     }
     await ctx.close();
   }

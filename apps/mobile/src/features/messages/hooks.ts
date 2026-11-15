@@ -125,6 +125,40 @@ export function useSendMessage(weddingId: string) {
       ),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: msgKeys.list(weddingId) });
+      void qc.invalidateQueries({ queryKey: ['wedding', weddingId, 'message'] });
+    },
+  });
+}
+
+export type MessageSummary = components['schemas']['MessageSummary'];
+export type MessageDelivery = components['schemas']['MessageDelivery'];
+
+export function useMessageSummary(weddingId: string, messageId: string) {
+  return useQuery({
+    queryKey: [...msgKeys.one(weddingId, messageId), 'summary'],
+    queryFn: async (): Promise<MessageSummary> =>
+      unwrap(await api.GET('/v1/weddings/{weddingId}/messages/{messageId}/summary', { params: { path: { weddingId, messageId } } })),
+  });
+}
+
+export function useFailedDeliveries(weddingId: string, messageId: string) {
+  return useQuery({
+    queryKey: [...msgKeys.one(weddingId, messageId), 'deliveries', 'failed'],
+    queryFn: async (): Promise<MessageDelivery[]> =>
+      unwrap(
+        await api.GET('/v1/weddings/{weddingId}/messages/{messageId}/deliveries', { params: { path: { weddingId, messageId }, query: { status: 'failed' } } }),
+      ).items,
+  });
+}
+
+export function useRetryFailed(weddingId: string, messageId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      unwrap(await api.POST('/v1/weddings/{weddingId}/messages/{messageId}/retry-failed', { params: { path: { weddingId, messageId } } })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: msgKeys.one(weddingId, messageId) });
+      void qc.invalidateQueries({ queryKey: msgKeys.list(weddingId) });
     },
   });
 }

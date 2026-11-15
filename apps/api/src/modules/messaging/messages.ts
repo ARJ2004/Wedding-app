@@ -8,6 +8,7 @@ import { WeddingParams } from '../weddings/schemas';
 import { AudienceSpec, resolveAudience } from './audience';
 import type { MessagingProvider } from './providers';
 import type { FanoutService } from './fanout';
+import { deliveryCounts, errorLabel } from './status';
 
 const Lang = z.enum(['en', 'hi', 'kn']);
 const Channel = z.enum(['whatsapp', 'push']);
@@ -347,6 +348,125 @@ export function messageRoutes(ctx: RouteContext, deps: { prisma: PrismaClient; p
       if (!members.some((x) => !x.suppressed)) throw new AppError('MSG_AUDIENCE_EMPTY', 'Nobody in this audience can get a message', 409);
       if (!(await deps.fanout.startSend(m, req.principal!.userId))) throw new AppError('MSG_VERSION_CONFLICT', 'Someone else changed this message; reload it', 409);
       return { status: 'resolving', recipientCountEstimate: members.length };
+    },
+  });
+  const Counts = z.record(z.string(), z.number().int());
+  defineRoute(ctx, {
+    method: 'get',
+    path: `${W}/:messageId/summary`,
+    summary: 'Delivery counts for a sent message',
+    tags: ['messaging'],
+    auth: 'host',
+    permission: 'message.read',
+    request: { params: MessageParams },
+    response: {
+      status: 200,
+      schema: z
+        .object({
+          messageId: z.string(),
+          status: z.string(),
+          recipients: z.number().int(),
+          suppressed: Counts,
+          whatsapp: Counts,
+          deliveredPct: z.number().int(),
+          readPct: z.number().int(),
+          sendingStartedAt: z.string().nullable(),
+          sentAt: z.string().nullable(),
+        })
+        .openapi('MessageSummary'),
+    },
+    handler: async ({ params }) => {
+      const m = await load(params.weddingId, params.messageId);
+      const whatsapp = await deliveryCounts(prisma, m.id);
+      const sup = await prisma.message_recipients.groupBy({ by: ['suppressed_reason'], where: { message_id: m.id, suppressed_reason: { not: null } }, _count: { _all: true } });
+      const total = Object.values(whatsapp).reduce((a, b) => a + b, 0) - whatsapp.cancelled;
+      const delivered = whatsapp.delivered + whatsapp.read;
+      const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
+      return {
+        messageId: m.id,
+        status: m.status,
+        recipients: m.recipient_count ?? 0,
+        suppressed: Object.fromEntries(sup.map((x) => [x.suppressed_reason!, x._count._all])),
+        whatsapp,
+        deliveredPct: pct(delivered),
+        readPct: pct(whatsapp.read),
+        sendingStartedAt: m.sending_started_at?.toISOString() ?? null,
+        sentAt: m.sent_at?.toISOString() ?? null,
+      };
+    },
+  });
+
+  const DeliveryItem = z
+    .object({
+      deliveryId: z.string(),
+      guestId: z.string(),
+      guestName: z.string(),
+      partyLabel: z.string(),
+      status: z.string(),
+      errorCode: z.string().nullable(),
+      errorLabel: z.string().nullable(),
+      /** Full number for owner/co-host; masked for planners (07-msg §8). */
+      phone: z.string().nullable(),
+      phoneMasked: z.boolean(),
+      updatedAt: z.string(),
+    })
+    .openapi('MessageDelivery');
+  defineRoute(ctx, {
+    method: 'get',
+    path: `${W}/:messageId/deliveries`,
+    summary: 'Deliveries for a message, e.g. ?status=failed',
+    tags: ['messaging'],
+    auth: 'host',
+    permission: 'message.read',
+    request: { params: MessageParams, query: z.object({ status: z.enum(['queued', 'sending', 'sent', 'delivered', 'read', 'failed', 'unknown']).optional() }) },
+    response: { status: 200, schema: z.object({ items: z.array(DeliveryItem) }) },
+    handler: async ({ params, query, req }) => {
+      const m = await load(params.weddingId, params.messageId);
+      const fullPhone = req.membership?.role === 'owner' || req.membership?.role === 'co_host';
+      const rows = await prisma.message_deliveries.findMany({
+        where: { message_id: m.id, ...(query.status ? { status: query.status } : {}) },
+        include: { message_recipients: { include: { guests: { select: { full_name: true, phone_e164: true } }, parties: { select: { label: true } } } } },
+        orderBy: [{ queued_at: 'asc' }, { id: 'asc' }],
+        take: 500,
+      });
+      return {
+        items: rows.map((d) => {
+          const g = d.message_recipients.guests;
+          const at = d.read_at ?? d.delivered_at ?? d.failed_at ?? d.sent_at ?? d.queued_at;
+          return {
+            deliveryId: d.id,
+            guestId: d.guest_id,
+            guestName: g.full_name,
+            partyLabel: d.message_recipients.parties.label,
+            status: d.status,
+            errorCode: d.error_code,
+            errorLabel: errorLabel(d.error_code),
+            phone: g.phone_e164 ? (fullPhone ? g.phone_e164 : `${g.phone_e164.slice(0, 3)} ••••• ${g.phone_e164.slice(-3)}`) : null,
+            phoneMasked: !fullPhone,
+            updatedAt: at.toISOString(),
+          };
+        }),
+      };
+    },
+  });
+
+  defineRoute(ctx, {
+    method: 'post',
+    path: `${W}/:messageId/retry-failed`,
+    summary: 'Send the failed WhatsApp messages again',
+    tags: ['messaging'],
+    auth: 'host',
+    permission: 'message.send',
+    request: { params: MessageParams },
+    response: { status: 202, schema: z.object({ requeued: z.number().int() }) },
+    errors: [404, 409],
+    handler: async ({ params, req }) => {
+      const m = await load(params.weddingId, params.messageId);
+      if (!['sending', 'sent'].includes(m.status)) throw new AppError('MSG_NOTHING_TO_RETRY', 'Nothing to retry', 409);
+      const requeued = await deps.fanout.retryFailed(m.id);
+      if (requeued === 0) throw new AppError('MSG_NOTHING_TO_RETRY', 'Nothing failed', 409);
+      await writeAudit(prisma, { weddingId: params.weddingId, actor: { type: 'user', id: req.principal!.userId }, action: 'message.retry_failed', entityType: 'message', entityId: m.id, after: { requeued } });
+      return { requeued };
     },
   });
 }

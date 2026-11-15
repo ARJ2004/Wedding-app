@@ -8,6 +8,7 @@ import { AudienceSpec, resolveAudience } from './audience';
 import { phoneHash } from './phone-hash';
 import type { MessagingProvider } from './providers';
 import { mapLimit, TokenBucket } from './token-bucket';
+import type { MessageStats } from './status';
 
 const BATCH = 50;
 const IN_FLIGHT = 10;
@@ -40,6 +41,8 @@ export interface FanoutDeps {
   piiHashKey: string;
   /** Provider calls per second in this process. */
   rate?: number;
+  /** MSG-06: refreshes messages.stats and publishes progress after each batch. */
+  stats?: MessageStats;
 }
 
 /**
@@ -194,7 +197,10 @@ export class FanoutService {
       });
       return 'failed' as const;
     });
-    for (const mid of new Set(rows.map((r) => r.message_id))) await this.finishIfDone(mid);
+    for (const mid of new Set(rows.map((r) => r.message_id))) {
+      await this.finishIfDone(mid);
+      await this.d.stats?.refresh(mid);
+    }
     return outcomes;
   }
 
@@ -204,6 +210,22 @@ export class FanoutService {
     if (pending > 0) return false;
     const n = await this.d.prisma.messages.updateMany({ where: { id: messageId, status: 'sending' }, data: { status: 'sent', sent_at: new Date(), updated_at: new Date() } });
     return n.count > 0;
+  }
+
+  /** Re-queues `failed` WhatsApp deliveries (never `unknown`: those may have arrived). */
+  async retryFailed(messageId: string) {
+    const ids = (
+      await this.d.prisma.$queryRaw<{ id: string }[]>`
+        UPDATE message_deliveries SET status = 'queued', status_rank = 0, error_code = NULL, error_detail = NULL,
+               failed_at = NULL, next_attempt_at = NULL, attempts = 0
+        WHERE message_id = ${messageId}::uuid AND channel = 'whatsapp' AND status = 'failed'
+        RETURNING id`
+    ).map((r) => r.id);
+    if (ids.length === 0) return 0;
+    await this.d.prisma.messages.update({ where: { id: messageId }, data: { status: 'sending', updated_at: new Date() } });
+    for (let i = 0; i < ids.length; i += BATCH) await this.d.jobs.send(this.jobs.sendBatch, { deliveryIds: ids.slice(i, i + BATCH) });
+    await this.d.stats?.refresh(messageId);
+    return ids.length;
   }
 
   async markStuck() {
