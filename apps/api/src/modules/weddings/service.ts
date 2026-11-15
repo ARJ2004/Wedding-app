@@ -2,6 +2,7 @@ import type { Prisma, PrismaClient, events, venues, weddings } from '@prisma/cli
 import { isValidTimeZone, presetFor, zonedTimeToUtc, EVENT_PRESETS, type WeddingRole } from '@mehfil/domain';
 import type { z } from 'zod';
 import { AppError } from '../../common/errors';
+import type { ObjectStore } from '../../common/object-store';
 import { diff, writeAudit } from '../audit';
 import { parseMapsLink } from './maps';
 import type {
@@ -30,7 +31,7 @@ const BUILT_IN_GROUPS = [
   ['vip', 'VIP'],
 ] as const;
 
-export function toWedding(w: weddings, myRole: WeddingRole) {
+export function toWedding(w: weddings, myRole: WeddingRole, coverUrl: string | null = null) {
   return {
     id: w.id,
     organizationId: w.organization_id,
@@ -44,6 +45,7 @@ export function toWedding(w: weddings, myRole: WeddingRole) {
     plan: w.plan,
     status: w.status,
     myRole,
+    coverUrl,
   };
 }
 
@@ -81,7 +83,17 @@ function checkDates(startsOn: string, endsOn: string) {
 }
 
 export class WeddingsService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly objectStore?: ObjectStore,
+  ) {}
+
+  private async coverUrl(w: weddings) {
+    if (!w.cover_media_id || !this.objectStore) return null;
+    const m = await this.prisma.media_objects.findUnique({ where: { id: w.cover_media_id } });
+    if (!m || (m.status !== 'uploaded' && m.status !== 'processed')) return null;
+    return this.objectStore.presignGet(m.s3_key, { bucket: m.s3_bucket, expiresInSeconds: 3600 });
+  }
 
   async create(actor: Actor, input: z.infer<typeof CreateWeddingSchema>) {
     checkDates(input.startsOn, input.endsOn);
@@ -133,7 +145,7 @@ export class WeddingsService {
   async get(weddingId: string, role: WeddingRole) {
     const w = await this.prisma.weddings.findFirst({ where: { id: weddingId, deleted_at: null } });
     if (!w) throw new AppError('WEDDING_NOT_FOUND', 'Wedding not found', 404);
-    return toWedding(w, role);
+    return toWedding(w, role, await this.coverUrl(w));
   }
 
   async update(actor: Actor, weddingId: string, input: z.infer<typeof UpdateWeddingSchema>) {
@@ -143,6 +155,11 @@ export class WeddingsService {
       const endsOn = input.endsOn ?? isoDate(w.ends_on);
       checkDates(startsOn, endsOn);
       if (input.timezone && !isValidTimeZone(input.timezone)) throw new AppError('SET_TIMEZONE_INVALID', 'Unknown timezone', 400);
+      if (input.coverMediaId) {
+        const m = await tx.media_objects.findFirst({ where: { id: input.coverMediaId, wedding_id: weddingId, kind: 'cover' } });
+        if (!m) throw new AppError('SET_COVER_NOT_FOUND', 'Cover photo not found in this wedding', 400);
+        if (m.status !== 'uploaded' && m.status !== 'processed') throw new AppError('SET_COVER_NOT_READY', 'Finish uploading the photo first', 409);
+      }
       const before = toWedding(w, actor.role!);
       const updated = await tx.weddings.update({
         where: { id: weddingId },
@@ -154,12 +171,13 @@ export class WeddingsService {
           ends_on: input.endsOn ? new Date(input.endsOn) : undefined,
           timezone: input.timezone,
           cities: input.cities,
+          cover_media_id: input.coverMediaId,
           updated_by: actor.userId,
           updated_at: new Date(),
         },
       });
-      const after = toWedding(updated, actor.role!);
-      const d = diff(before, after);
+      const after = toWedding(updated, actor.role!, await this.coverUrl(updated));
+      const d = diff({ ...before, coverMediaId: w.cover_media_id }, { ...after, coverUrl: before.coverUrl, coverMediaId: updated.cover_media_id });
       if (d.changed) {
         await writeAudit(tx, {
           weddingId,

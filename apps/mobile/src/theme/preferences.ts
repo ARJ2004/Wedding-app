@@ -13,7 +13,10 @@ export interface AppearancePrefs {
 }
 
 interface AppearanceState extends AppearancePrefs {
+  /** The open wedding's palette (settings.branding.palette); not persisted. */
+  weddingPalette: PaletteName | null;
   set(patch: Partial<AppearancePrefs>): void;
+  setWeddingPalette(p: PaletteName | null): void;
 }
 
 const KEY = 'appearance.v1';
@@ -32,6 +35,10 @@ function initial(): AppearancePrefs {
 /** Per-device appearance choices. The brand default lives in THEME_CONFIG, not here. */
 export const useAppearance = create<AppearanceState>((set, get) => ({
   ...initial(),
+  weddingPalette: null,
+  setWeddingPalette(p) {
+    set({ weddingPalette: p });
+  },
   set(patch) {
     set(patch);
     const { scheme, largeText, highContrast, palette } = { ...get(), ...patch };

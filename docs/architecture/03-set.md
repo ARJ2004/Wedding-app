@@ -48,6 +48,8 @@ SQL: [`sql/03-set.sql`](./sql/03-set.sql). **Schema check passed** (`scripts/che
 
 ### Settings schema (`packages/domain/src/wedding/settings.ts`)
 
+> **Implemented as** `packages/domain/src/wedding-settings.ts` (SET-06). Change from this design: `branding` holds `palette` (one of the contrast-tested palettes in `packages/design-tokens`, or null for the app default) instead of `accentColour`/`theme`, so a host can never pick an unreadable colour. The app applies the wedding palette to its theme (device choice still wins).
+
 ```ts
 export const WeddingSettingsV1 = z.object({
   camera: z.object({

@@ -94,3 +94,7 @@ export const PALETTES = {
 
 export type PaletteName = keyof typeof PALETTES;
 export const PALETTE_NAMES = Object.keys(PALETTES) as PaletteName[];
+
+export function isPaletteName(value: string): value is PaletteName {
+  return Object.prototype.hasOwnProperty.call(PALETTES, value);
+}

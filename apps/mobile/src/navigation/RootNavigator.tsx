@@ -7,7 +7,7 @@ import { EventsScreen } from '../features/events';
 import { GuestEntryScreen } from '../features/guest-entry';
 import { GuestsScreen, ImportScreen } from '../features/guests';
 import { MoreScreen } from '../features/settings';
-import { CreateWeddingScreen, HostHomeScreen, WeddingPickerScreen } from '../features/weddings';
+import { CreateWeddingScreen, HostHomeScreen, useApplyWeddingPalette, WeddingPickerScreen, WeddingSettingsScreen } from '../features/weddings';
 import { useT } from '../i18n/useT';
 import { useSession } from '../lib/session';
 import { useTheme } from '../theme/ThemeProvider';
@@ -17,11 +17,22 @@ type WelcomeStack = { Welcome: undefined; GuestEntry: undefined };
 type PickerStack = { Picker: undefined; CreateWedding: undefined };
 type HostTabs = { Home: undefined; Events: undefined; Guests: undefined; More: undefined };
 type GuestsStack = { GuestList: undefined; Import: undefined };
+type MoreStack = { MoreHome: undefined; WeddingSettings: undefined };
 
 const Welcome = createNativeStackNavigator<WelcomeStack>();
 const Picker = createNativeStackNavigator<PickerStack>();
 const Tabs = createBottomTabNavigator<HostTabs>();
 const Guests = createNativeStackNavigator<GuestsStack>();
+const More = createNativeStackNavigator<MoreStack>();
+
+function MoreNavigator() {
+  return (
+    <More.Navigator screenOptions={{ headerShown: false }}>
+      <More.Screen name="MoreHome">{({ navigation }) => <MoreScreen onWeddingSettings={() => navigation.navigate('WeddingSettings')} />}</More.Screen>
+      <More.Screen name="WeddingSettings">{({ navigation }) => <WeddingSettingsScreen onBack={() => navigation.goBack()} />}</More.Screen>
+    </More.Navigator>
+  );
+}
 
 function GuestsNavigator() {
   return (
@@ -56,6 +67,7 @@ function PickerNavigator() {
 function HostNavigator() {
   const t = useT();
   const theme = useTheme();
+  useApplyWeddingPalette(useSession((st) => st.weddingId)!);
   return (
     <Tabs.Navigator
       screenOptions={({ route }) => ({
@@ -74,7 +86,7 @@ function HostNavigator() {
       <Tabs.Screen name="Home" component={HostHomeScreen} options={{ title: t('tabs.home'), tabBarButtonTestID: 'tab-home' }} />
       <Tabs.Screen name="Events" component={EventsScreen} options={{ title: t('tabs.events'), tabBarButtonTestID: 'tab-events' }} />
       <Tabs.Screen name="Guests" component={GuestsNavigator} options={{ title: t('tabs.guests'), tabBarButtonTestID: 'tab-guests' }} />
-      <Tabs.Screen name="More" component={MoreScreen} options={{ title: t('tabs.more'), tabBarButtonTestID: 'tab-more' }} />
+      <Tabs.Screen name="More" component={MoreNavigator} options={{ title: t('tabs.more'), tabBarButtonTestID: 'tab-more' }} />
     </Tabs.Navigator>
   );
 }

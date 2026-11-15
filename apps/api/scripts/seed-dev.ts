@@ -57,7 +57,7 @@ export async function seed(prisma: PrismaClient, log: (line: string) => void = (
       status: 'live',
       plan: 'complete',
       created_by: owner.id,
-      settings: { camera: { shotLimit: 24, reveal: 'instant' } },
+      settings: { camera: { shotLimit: 24, revealMode: 'instant' }, branding: { palette: null } },
     },
   });
   await prisma.wedding_members.createMany({

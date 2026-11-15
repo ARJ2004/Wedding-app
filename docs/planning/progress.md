@@ -55,8 +55,8 @@ Tracked by the Ralph loop (`.claude/ralph/PROMPT.md`). Status: `todo`, `doing`, 
 | GST-05a | In-import duplicates | 1 | done | In-file duplicate phones and existing-guest phone matches flagged as duplicate (default skip, can merge). |
 | GST-06 | Groups and tags | 3 | done | Groups: create/rename/recolour/delete (built-ins protected), bulk add/remove ≤500 parties (cross-wedding rejected), audit. App: "+ New group", Select mode → add selected families to a group. |
 | GST-07a | Search, filters, export | 3 | done | Search (name/label/last-4 digits) + group/phone filters were in GST-01; export.csv one row per guest with shared csvCell guard (keeps +91 phones intact, neutralises formulas), BOM for Indic names; desk staff 403. App: Export CSV (share sheet / download). RSVP/travel/arrival filters arrive with their epics (GST-07b). |
-| SET-05 | Key contacts | 1 | todo | |
-| SET-06 | Wedding settings + cover | 3 | todo | |
+| SET-05 | Key contacts | 1 | done | Key contacts: CRUD + reorder, max 10, phone validated/normalised, audit masks phones. App: list + add in Wedding settings. |
+| SET-06 | Wedding settings + cover | 3 | done | Settings: versioned Zod schema in packages/domain (camera, language, branding.palette, guests), GET/PATCH deep merge + strict validation + audit. Deviation: branding = one of the contrast-tested palettes (design-tokens) instead of a free accent colour. Cover photo via upload purpose "cover" → PATCH coverMediaId (same wedding, uploaded) → coverUrl. App: Wedding settings (cover, shots, reveal, language, palette applied to the app theme). Fixed: PATCH /weddings reset timezone/cities via schema defaults. |
 | CAM-01a | Upload core | 2 | done | media module: upload policy registry (cover, import), POST /v1/weddings/:id/uploads → presigned PUT, POST /v1/uploads/:id/complete (HEAD + size check) → media.process job. Needs credentials: S3 bucket (MinIO/fake in dev). |
 | APP-05a | Store release pipeline | 3 | todo | |
 | OPS-04a | Device lab setup (S4) | 1 | todo | |

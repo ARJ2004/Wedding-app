@@ -22,11 +22,16 @@ import {
   WeddingSchema,
 } from './schemas';
 import { WeddingsService, type Actor } from './service';
+import { contactRoutes } from './contacts';
+import { settingsRoutes } from './settings';
+import type { ObjectStore } from '../../common/object-store';
 
 const actor = (req: Request): Actor => ({ userId: req.principal!.userId, role: req.membership?.role, requestId: String(req.id) });
 
-export function weddingRoutes(ctx: RouteContext, deps: { prisma: PrismaClient }) {
-  const svc = new WeddingsService(deps.prisma);
+export function weddingRoutes(ctx: RouteContext, deps: { prisma: PrismaClient; objectStore: ObjectStore }) {
+  const svc = new WeddingsService(deps.prisma, deps.objectStore);
+  settingsRoutes(ctx, deps);
+  contactRoutes(ctx, deps);
   const W = '/v1/weddings/:weddingId';
 
   defineRoute(ctx, {

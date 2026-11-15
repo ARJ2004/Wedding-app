@@ -132,6 +132,39 @@ if (want('groups-')) {
   await ctx.close();
 }
 
+if (want('settings-')) {
+  const cover = path.resolve(here, '../../../docs/samples/cover-sample.jpg');
+  const { ctx, page } = await session();
+  await tab(page, 'tab-more', 'screen-more');
+  await page.getByTestId('open-wedding-settings').click();
+  await page.getByTestId('screen-wedding-settings').waitFor();
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByTestId('pick-cover').click();
+  await (await chooser).setFiles(cover);
+  await page.getByTestId('cover-image').waitFor({ timeout: 20000 });
+  await page.getByTestId('shots-36').click();
+  await page.waitForTimeout(800);
+  await shot(page, 'settings-01-cover-camera');
+  await page.getByTestId('wedding-palette-mehendiGold').click();
+  await page.waitForTimeout(1200);
+  await page.getByTestId('contact-label').fill('Travel help');
+  await page.getByTestId('contact-name').fill('Vikram (bride\'s brother)');
+  await page.getByTestId('contact-phone').fill('98450 12345');
+  await page.getByTestId('add-contact').click();
+  await page.getByText('Vikram (bride\'s brother) · Travel help').first().waitFor();
+  await page.getByTestId('contact-label').scrollIntoViewIfNeeded();
+  await shot(page, 'settings-02-palette-contacts');
+  await page.getByTestId('settings-done').click();
+  await tab(page, 'tab-home', 'screen-host-home');
+  await shot(page, 'settings-03-home-with-cover');
+  // back to the default palette so later shots are unaffected
+  await tab(page, 'tab-more', 'screen-more');
+  await page.getByTestId('open-wedding-settings').click();
+  await page.getByTestId('wedding-palette-maroonMarigold').click();
+  await page.waitForTimeout(800);
+  await ctx.close();
+}
+
 // Import flow last: it adds guests to the demo wedding.
 if (want('import-')) {
   const sample = path.resolve(here, '../../../docs/samples/guest-list-sample.xlsx');

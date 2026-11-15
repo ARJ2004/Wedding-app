@@ -23,6 +23,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.700.0
         version: 3.1169.0
+      '@mehfil/design-tokens':
+        specifier: workspace:*
+        version: link:../../packages/design-tokens
       '@mehfil/domain':
         specifier: workspace:*
         version: link:../../packages/domain

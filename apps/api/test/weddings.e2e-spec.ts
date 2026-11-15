@@ -62,6 +62,8 @@ describe('weddings (SET-01, ROL-02a, ROL-04)', () => {
     expect(denied.body.error.code).toBe('ROL_FORBIDDEN');
     const ok = await request(app).patch(`/v1/weddings/${weddingId}`).set(team.co_host!.auth).send({ title: 'Ananya weds Rohan' }).expect(200);
     expect(ok.body).toMatchObject({ title: 'Ananya weds Rohan', myRole: 'co_host' });
+    // regression: a partial PATCH keeps the other fields
+    expect(ok.body).toMatchObject({ timezone: 'Asia/Kolkata', cities: ['Udaipur'], partnerOneName: 'Ananya' });
     const entry = await testPrisma().audit_log.findFirstOrThrow({ where: { wedding_id: weddingId, action: 'wedding.update' } });
     expect(entry).toMatchObject({ actor_role: 'co_host', before: { title: 'Ananya & Rohan' }, after: { title: 'Ananya weds Rohan' } });
   });

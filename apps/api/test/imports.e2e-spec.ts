@@ -159,6 +159,10 @@ describe('dev fake S3 sink', () => {
     expect(t.body.uploadUrl).toMatch(/^\/v1\/dev\/fake-s3\//);
     await request(app2).put(t.body.uploadUrl).set('Content-Type', 'text/csv').send(Buffer.from('Name\nAsha')).expect(200);
     await request(app2).post(`/v1/uploads/${t.body.mediaId}/complete`).set(owner.auth).expect(200);
+    const media = await testPrisma().media_objects.findUniqueOrThrow({ where: { id: t.body.mediaId } });
+    const getUrl = await store2.presignGet(media.s3_key, { bucket: media.s3_bucket });
+    const got = await request(app2).get(getUrl).expect(200);
+    expect(got.headers['content-type']).toContain('text/csv');
     await request(boot({ config: { NODE_ENV: 'production' } })).put(t.body.uploadUrl).send('x').expect(404); // never in production
   });
 });

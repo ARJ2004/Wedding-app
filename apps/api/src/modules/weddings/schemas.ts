@@ -23,6 +23,8 @@ export const WeddingSchema = z
     plan: z.string(),
     status: z.string(),
     myRole: Role,
+    /** Short-lived URL for the cover photo, or null. */
+    coverUrl: z.string().nullable(),
   })
   .openapi('Wedding');
 
@@ -40,9 +42,20 @@ export const CreateWeddingSchema = z
   })
   .openapi('CreateWedding');
 
-export const UpdateWeddingSchema = CreateWeddingSchema.omit({ organizationId: true })
-  .partial()
-  .extend({ partnerOneName: z.string().trim().max(60).nullable().optional(), partnerTwoName: z.string().trim().max(60).nullable().optional() })
+// Written out (not CreateWeddingSchema.partial()) so create-time defaults never overwrite stored
+// values on PATCH: { title } must not reset timezone or cities.
+export const UpdateWeddingSchema = z
+  .object({
+    title: z.string().trim().min(2).max(120).optional(),
+    partnerOneName: z.string().trim().max(60).nullable().optional(),
+    partnerTwoName: z.string().trim().max(60).nullable().optional(),
+    startsOn: IsoDate.optional(),
+    endsOn: IsoDate.optional(),
+    timezone: z.string().optional(),
+    cities: z.array(z.string().trim().min(1).max(60)).max(5).optional(),
+    /** An uploaded media object of purpose "cover" in this wedding; null removes the cover. */
+    coverMediaId: Uuid.nullable().optional(),
+  })
   .openapi('UpdateWedding');
 
 export const EventSchema = z

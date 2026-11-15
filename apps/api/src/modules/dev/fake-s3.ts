@@ -16,5 +16,15 @@ export function fakeS3Router(store: ObjectStore): Router | null {
       res.status((e as Error).message === 'EntityTooLarge' ? 413 : 400).json({ error: { code: 'FAKE_S3_REJECTED', message: (e as Error).message } });
     }
   });
+  router.get('/v1/dev/fake-s3/:id', (req, res) => {
+    const obj = store.readByUrl(req.originalUrl);
+    if (!obj) {
+      res.status(404).end();
+      return;
+    }
+    res.setHeader('Content-Type', obj.contentType);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.send(obj.body);
+  });
   return router;
 }

@@ -13,11 +13,12 @@ const ThemeContext = createContext<Theme | null>(null);
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const system = useColorScheme();
-  const { scheme, largeText, highContrast, palette } = useAppearance();
+  const { scheme, largeText, highContrast, palette, weddingPalette } = useAppearance();
   const resolvedScheme = scheme === 'system' ? (system === 'dark' ? 'dark' : 'light') : scheme;
   const theme = useMemo(
-    () => resolveTheme({ scheme: resolvedScheme, largeText, highContrast, palette: palette ?? undefined }),
-    [resolvedScheme, largeText, highContrast, palette],
+    // Device choice > the wedding's palette > the app default in theme.config.ts.
+    () => resolveTheme({ scheme: resolvedScheme, largeText, highContrast, palette: palette ?? weddingPalette ?? undefined }),
+    [resolvedScheme, largeText, highContrast, palette, weddingPalette],
   );
   return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { Image, View } from 'react-native';
 import { formatInZone, useT } from '../../i18n/useT';
 import { useSession } from '../../lib/session';
 import { useStyles } from '../../theme/ThemeProvider';
@@ -31,7 +31,8 @@ export function HostHomeScreen() {
   const parties = useParties(weddingId, '', null);
   useGroups(weddingId);
   const s = useStyles((th) => ({
-    hero: { backgroundColor: th.colors.primary, borderRadius: th.radii.lg, padding: th.spacing.xl, gap: th.spacing.xs },
+    hero: { backgroundColor: th.colors.primary, borderRadius: th.radii.lg, padding: th.spacing.xl, gap: th.spacing.xs, overflow: 'hidden' },
+    cover: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.35 },
     stats: { flexDirection: 'row' },
   }));
 
@@ -46,6 +47,7 @@ export function HostHomeScreen() {
   return (
     <Screen testID="screen-host-home">
       <View style={s.hero}>
+        {w.coverUrl ? <Image source={{ uri: w.coverUrl }} style={s.cover} accessibilityIgnoresInvertColors /> : null}
         <Text variant="caption" tone="onPrimary">
           {formatInZone(`${w.startsOn}T12:00:00Z`, w.timezone, { day: 'numeric', month: 'short' })} –{' '}
           {formatInZone(`${w.endsOn}T12:00:00Z`, w.timezone, { day: 'numeric', month: 'short', year: 'numeric' })}

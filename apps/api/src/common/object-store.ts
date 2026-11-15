@@ -216,7 +216,16 @@ export class FakeObjectStore implements ObjectStore {
   }
 
   async presignGet(key: string, opts: { bucket?: string } = {}) {
-    return `fake://${this.id(key, opts.bucket)}?op=get`;
+    const id = this.id(key, opts.bucket);
+    return this.publicBaseUrl !== undefined
+      ? `${this.publicBaseUrl}/v1/dev/fake-s3/${encodeURIComponent(id)}?op=get`
+      : `fake://${id}?op=get`;
+  }
+
+  /** Dev sink: read an object by its presigned GET URL. */
+  readByUrl(url: string): FakeObject | undefined {
+    const dev = /\/v1\/dev\/fake-s3\/([^?]+)\?op=get$/.exec(url);
+    return dev ? this.objects.get(decodeURIComponent(dev[1]!)) : undefined;
   }
 
   /** Test helper: what the phone does with a presigned PUT URL. */
