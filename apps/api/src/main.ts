@@ -4,14 +4,18 @@ import { loadConfig } from './config/env';
 import { createLogger } from './common/logger';
 import { PgBossJobQueue } from './common/jobs';
 import { createObjectStore } from './common/object-store';
+import { initSentry, Metrics } from './common/observability';
 
 async function main() {
   const config = loadConfig();
   const logger = createLogger(config.LOG_LEVEL);
+  initSentry(config.SENTRY_DSN, config.NODE_ENV, process.env.APP_VERSION ?? 'dev');
+  const metrics = new Metrics();
+  metrics.listen(config.METRICS_PORT);
   const prisma = new PrismaClient();
   const jobs = PgBossJobQueue.create(config.DATABASE_URL, logger);
   await jobs.boss.start();
-  const { app } = createApp({ config, logger, prisma, jobs, objectStore: createObjectStore(config) });
+  const { app } = createApp({ config, logger, prisma, jobs, metrics, objectStore: createObjectStore(config) });
 
   const server = app.listen(config.PORT, () => {
     logger.info({ port: config.PORT, env: config.NODE_ENV, devAuth: config.DEV_AUTH_ENABLED }, 'api listening');

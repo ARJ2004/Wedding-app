@@ -37,6 +37,7 @@ export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = 
   app.disable('x-powered-by');
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(requestId);
+  if (deps.metrics) app.use(deps.metrics.middleware());
   app.use(
     pinoHttp({
       logger: deps.logger,

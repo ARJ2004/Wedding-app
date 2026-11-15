@@ -63,6 +63,8 @@ export const DLQ_SUFFIX = '.dlq';
 /** pg-boss backed queue, shared by the API (send) and the worker (register + work). */
 export class PgBossJobQueue implements JobQueue {
   private readonly created = new Set<string>();
+  /** Hook for metrics (worker sets it to Metrics.jobs.inc). */
+  onOutcome?: (queue: string, outcome: 'completed' | 'failed') => void;
 
   constructor(
     readonly boss: PgBoss,
@@ -160,7 +162,13 @@ export class PgBossJobQueue implements JobQueue {
               // A malformed payload will never succeed: fail it straight to the DLQ path.
               throw new Error(`invalid payload for ${job.name}: ${parsed.error.issues[0]?.message ?? 'unknown'}`);
             }
-            await job.handler(parsed.data, { jobId: j.id, logger: this.logger.child({ job: job.name, jobId: j.id }) });
+            try {
+              await job.handler(parsed.data, { jobId: j.id, logger: this.logger.child({ job: job.name, jobId: j.id }) });
+              this.onOutcome?.(job.name, 'completed');
+            } catch (err) {
+              this.onOutcome?.(job.name, 'failed');
+              throw err;
+            }
           }
         },
       );

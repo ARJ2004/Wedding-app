@@ -28,6 +28,8 @@ const EnvSchema = z.object({
   OPENAPI_DOCS: bool.default(false),
   GOOGLE_WEB_CLIENT_ID: optionalString,
   SENTRY_DSN: optionalString,
+  /** Prometheus metrics on 127.0.0.1 (scraped by the CloudWatch agent); 0 disables. */
+  METRICS_PORT: z.coerce.number().int().min(0).max(65535).default(9464),
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).default(300),
   AUTH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).default(20),
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).default(900),

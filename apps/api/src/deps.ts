@@ -3,6 +3,7 @@ import type { Logger } from 'pino';
 import type { AppConfig } from './config/env';
 import type { JobQueue } from './common/jobs';
 import type { ObjectStore } from './common/object-store';
+import type { Metrics } from './common/observability';
 
 /**
  * Everything a module needs, built once in main.ts / worker.ts / tests and passed down.
@@ -14,4 +15,6 @@ export interface Deps {
   prisma: PrismaClient;
   objectStore: ObjectStore;
   jobs: JobQueue;
+  /** Optional so tests and scripts can skip it. */
+  metrics?: Metrics;
 }

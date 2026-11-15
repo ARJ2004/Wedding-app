@@ -1,6 +1,7 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { ZodError } from 'zod';
 import type { Logger } from 'pino';
+import { captureError } from './observability';
 
 /** An error the API means to show the caller: stable code, safe message, HTTP status. */
 export class AppError extends Error {
@@ -58,6 +59,7 @@ export function errorHandler(logger: Logger): ErrorRequestHandler {
     const mapped = mapError(err);
     if (mapped.status >= 500) {
       logger.error({ err, requestId: req.id }, 'unhandled error');
+      captureError(err, String(req.id));
     }
     res.status(mapped.status).json(mapped.body);
   };

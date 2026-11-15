@@ -31,7 +31,7 @@ Tracked by the Ralph loop (`.claude/ralph/PROMPT.md`). Status: `todo`, `doing`, 
 | --- | --- | --- | --- | --- |
 | FND-05 | Host and staff auth | 5 | done | POST /v1/auth/google (Google verifier + dev bypass), /refresh (rotation, device-bound, reuse → all sessions revoked), /logout, /logout-all, GET /v1/me; separate host/guest secrets; auth rate limit. |
 | FND-07 | AWS staging environment | 5 | blocked: needs an AWS account, Mumbai region access and credentials (human) | IaC scripts can be written once access exists. |
-| FND-08 | Observability | 3 | todo | |
+| FND-08 | Observability | 3 | done | prom-client on 127.0.0.1:9464 (api) / 9465 (worker): HTTP latency by route template, job outcomes, process metrics; Sentry when SENTRY_DSN set, no bodies/headers/PII. Needs credentials: Sentry DSN, CloudWatch agent on EC2. |
 | APP-01a | App shell, sessions and host sign-in | 5 | todo | |
 | ROL-04 | Organisation model | 3 | done | Partial: family org auto-created per wedding, planner-org weddings require a seat, org_owner/org_admin get implicit planner_member. Seat/org management endpoints split to ROL-04b. |
 | ROL-02a | Matrix + enforcement scaffold (S2) | 2 | done | packages/domain permissions.ts (matrix, can, canAssign); defineRoute `permission` → loadMembership (404 for outsiders) + can() (403 ROL_FORBIDDEN); desk-staff masking in serialisers. |
