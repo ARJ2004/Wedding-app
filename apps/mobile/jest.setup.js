@@ -10,3 +10,4 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
 // Node 22 already provides crypto.getRandomValues; the RN polyfill is native-only.
 jest.mock('react-native-get-random-values', () => ({}));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
+jest.mock('@react-native-documents/picker', () => ({ pick: jest.fn(async () => []), types: { xlsx: 'xlsx', csv: 'csv' } }));

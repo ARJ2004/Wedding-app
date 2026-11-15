@@ -5,7 +5,7 @@ import React, { useEffect, useMemo } from 'react';
 import { WelcomeScreen } from '../features/auth-host';
 import { EventsScreen } from '../features/events';
 import { GuestEntryScreen } from '../features/guest-entry';
-import { GuestsScreen } from '../features/guests';
+import { GuestsScreen, ImportScreen } from '../features/guests';
 import { MoreScreen } from '../features/settings';
 import { CreateWeddingScreen, HostHomeScreen, WeddingPickerScreen } from '../features/weddings';
 import { useT } from '../i18n/useT';
@@ -16,10 +16,21 @@ import { Loading, Screen, Text } from '../ui';
 type WelcomeStack = { Welcome: undefined; GuestEntry: undefined };
 type PickerStack = { Picker: undefined; CreateWedding: undefined };
 type HostTabs = { Home: undefined; Events: undefined; Guests: undefined; More: undefined };
+type GuestsStack = { GuestList: undefined; Import: undefined };
 
 const Welcome = createNativeStackNavigator<WelcomeStack>();
 const Picker = createNativeStackNavigator<PickerStack>();
 const Tabs = createBottomTabNavigator<HostTabs>();
+const Guests = createNativeStackNavigator<GuestsStack>();
+
+function GuestsNavigator() {
+  return (
+    <Guests.Navigator screenOptions={{ headerShown: false }}>
+      <Guests.Screen name="GuestList">{({ navigation }) => <GuestsScreen onImport={() => navigation.navigate('Import')} />}</Guests.Screen>
+      <Guests.Screen name="Import">{({ navigation }) => <ImportScreen onDone={() => navigation.goBack()} />}</Guests.Screen>
+    </Guests.Navigator>
+  );
+}
 
 const TAB_GLYPH: Record<keyof HostTabs, string> = { Home: '⌂', Events: '◷', Guests: '☺', More: '≡' };
 
@@ -62,7 +73,7 @@ function HostNavigator() {
     >
       <Tabs.Screen name="Home" component={HostHomeScreen} options={{ title: t('tabs.home'), tabBarButtonTestID: 'tab-home' }} />
       <Tabs.Screen name="Events" component={EventsScreen} options={{ title: t('tabs.events'), tabBarButtonTestID: 'tab-events' }} />
-      <Tabs.Screen name="Guests" component={GuestsScreen} options={{ title: t('tabs.guests'), tabBarButtonTestID: 'tab-guests' }} />
+      <Tabs.Screen name="Guests" component={GuestsNavigator} options={{ title: t('tabs.guests'), tabBarButtonTestID: 'tab-guests' }} />
       <Tabs.Screen name="More" component={MoreScreen} options={{ title: t('tabs.more'), tabBarButtonTestID: 'tab-more' }} />
     </Tabs.Navigator>
   );

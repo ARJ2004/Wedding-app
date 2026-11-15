@@ -1,3 +1,6 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createObjectStore, FakeObjectStore, S3ObjectStore } from './object-store';
 
 describe('S3ObjectStore presigning (no network)', () => {
@@ -53,5 +56,18 @@ describe('createObjectStore', () => {
   it('picks the implementation from config', () => {
     expect(createObjectStore({ OBJECT_STORE: 'fake' })).toBeInstanceOf(FakeObjectStore);
     expect(createObjectStore({ OBJECT_STORE: 'minio', S3_BUCKET: 'b' })).toBeInstanceOf(S3ObjectStore);
+  });
+});
+
+describe('local disk store (dev)', () => {
+  it('shares objects between two instances (API and worker processes)', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mehfil-'));
+    const api = new FakeObjectStore('local', '', dir);
+    const worker = new FakeObjectStore('local', '', dir);
+    const { url } = await api.presignPut({ key: 'weddings/w/import/a.csv', contentType: 'text/csv', maxBytes: 100 });
+    expect(url.startsWith('/v1/dev/fake-s3/')).toBe(true);
+    api.simulateUpload(url, Buffer.from('Name\nAsha'), 'text/csv');
+    expect((await worker.get('weddings/w/import/a.csv'))?.toString()).toBe('Name\nAsha');
+    expect(await worker.head('weddings/w/import/a.csv')).toEqual({ contentType: 'text/csv', byteSize: 9 });
   });
 });

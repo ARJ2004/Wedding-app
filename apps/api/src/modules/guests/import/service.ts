@@ -172,7 +172,7 @@ export class ImportService {
           status: r.status,
           action: r.action,
           partyKey: r.party_key,
-          fullName: n.primary.fullName,
+          fullName: n.issues.some((i) => i.code === 'NAME_MISSING') ? '' : n.primary.fullName,
           phone: n.primary.phoneE164,
           members: n.extraMembers.length + 1,
           issues: (r.issues as { field: string; code: string }[]).map((i) => i.code),

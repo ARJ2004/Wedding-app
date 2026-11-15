@@ -18,12 +18,16 @@ const EnvSchema = z.object({
   JWT_HOST_SECRET: z.string().min(32),
   JWT_GUEST_SECRET: z.string().min(32),
   DEV_AUTH_ENABLED: bool.default(false),
-  OBJECT_STORE: z.enum(['s3', 'minio', 'fake']).default('s3'),
+  OBJECT_STORE: z.enum(['s3', 'minio', 'fake', 'local']).default('s3'),
+  /** OBJECT_STORE=local (dev without Docker): objects as files, shared by API and worker. */
+  LOCAL_STORE_DIR: z.string().default('.data/objects'),
   S3_BUCKET: optionalString,
   S3_REGION: optionalString,
   S3_ENDPOINT: optionalString,
   S3_ACCESS_KEY_ID: optionalString,
   S3_SECRET_ACCESS_KEY: optionalString,
+  /** Dev only, OBJECT_STORE=fake: base URL clients use for the fake upload sink ('' = same origin). */
+  FAKE_S3_PUBLIC_BASE: z.string().optional(),
   MESSAGING_PROVIDER: z.enum(['meta', 'log']).default('meta'),
   OPENAPI_DOCS: bool.default(false),
   GOOGLE_WEB_CLIENT_ID: optionalString,
@@ -58,7 +62,7 @@ function productionProblems(c: AppConfig): string[] {
   if (c.NODE_ENV !== 'production') return [];
   const problems: string[] = [];
   if (c.DEV_AUTH_ENABLED) problems.push('DEV_AUTH_ENABLED must be false in production');
-  if (c.OBJECT_STORE === 'fake') problems.push('OBJECT_STORE=fake is not allowed in production');
+  if (c.OBJECT_STORE === 'fake' || c.OBJECT_STORE === 'local') problems.push(`OBJECT_STORE=${c.OBJECT_STORE} is not allowed in production`);
   if (c.MESSAGING_PROVIDER === 'log') problems.push('MESSAGING_PROVIDER=log is not allowed in production');
   if (c.OPENAPI_DOCS) problems.push('OPENAPI_DOCS must be false in production');
   if (!c.GOOGLE_WEB_CLIENT_ID) problems.push('GOOGLE_WEB_CLIENT_ID is required in production');

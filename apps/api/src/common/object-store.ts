@@ -7,6 +7,8 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 export interface PresignPutInput {
   key: string;
@@ -134,16 +136,69 @@ interface FakeObject {
   contentType: string;
 }
 
+/** Where fake/local stores keep objects. The in-memory map is per process; disk is shared. */
+interface Backend {
+  get(id: string): FakeObject | undefined;
+  set(id: string, obj: FakeObject): void;
+  delete(id: string): void;
+  keys(): string[];
+}
+
+class MemoryBackend implements Backend {
+  private readonly map = new Map<string, FakeObject>();
+  get = (id: string) => this.map.get(id);
+  set = (id: string, obj: FakeObject) => void this.map.set(id, obj);
+  delete = (id: string) => void this.map.delete(id);
+  keys = () => [...this.map.keys()];
+}
+
+/** Dev only: objects as files so the API and the worker process see the same uploads. */
+class DiskBackend implements Backend {
+  constructor(private readonly dir: string) {
+    mkdirSync(dir, { recursive: true });
+  }
+  private file(id: string) {
+    return join(this.dir, Buffer.from(id).toString('base64url'));
+  }
+  get(id: string) {
+    const f = this.file(id);
+    if (!existsSync(f)) return undefined;
+    return { body: readFileSync(f), contentType: readFileSync(`${f}.type`, 'utf8') };
+  }
+  set(id: string, obj: FakeObject) {
+    writeFileSync(this.file(id), obj.body);
+    writeFileSync(`${this.file(id)}.type`, obj.contentType);
+  }
+  delete(id: string) {
+    rmSync(this.file(id), { force: true });
+    rmSync(`${this.file(id)}.type`, { force: true });
+  }
+  keys() {
+    return readdirSync(this.dir)
+      .filter((f) => !f.endsWith('.type'))
+      .map((f) => Buffer.from(f, 'base64url').toString());
+  }
+}
+
 /**
  * In-memory ObjectStore for tests and offline dev. Presigned URLs are fake:// strings that
  * tests can hand to `simulateUpload()` to play the part of the phone uploading to S3.
  */
 export class FakeObjectStore implements ObjectStore {
   readonly defaultBucket: string;
-  private readonly objects = new Map<string, FakeObject>();
+  private readonly objects: Backend;
 
-  constructor(bucket = 'fake-bucket') {
+  /**
+   * @param publicBaseUrl when set (dev preview only), presigned PUTs point at the API's dev upload
+   *   sink (`PUT {base}/v1/dev/fake-s3/...`) so a browser or simulator can upload for real.
+   */
+  constructor(
+    bucket = 'fake-bucket',
+    private readonly publicBaseUrl?: string,
+    diskDir?: string,
+  ) {
     this.defaultBucket = bucket;
+    this.objects = diskDir ? new DiskBackend(diskDir) : new MemoryBackend();
   }
 
   private id(key: string, bucket?: string) {
@@ -152,7 +207,11 @@ export class FakeObjectStore implements ObjectStore {
 
   async presignPut(input: PresignPutInput) {
     const expiresIn = input.expiresInSeconds ?? DEFAULT_PUT_EXPIRY;
-    const url = `fake://${this.id(input.key, input.bucket)}?op=put&maxBytes=${input.maxBytes}`;
+    const id = this.id(input.key, input.bucket);
+    const url =
+      this.publicBaseUrl !== undefined
+        ? `${this.publicBaseUrl}/v1/dev/fake-s3/${encodeURIComponent(id)}?maxBytes=${input.maxBytes}`
+        : `fake://${id}?op=put&maxBytes=${input.maxBytes}`;
     return { url, headers: { 'Content-Type': input.contentType }, expiresAt: new Date(Date.now() + expiresIn * 1000) };
   }
 
@@ -162,7 +221,9 @@ export class FakeObjectStore implements ObjectStore {
 
   /** Test helper: what the phone does with a presigned PUT URL. */
   simulateUpload(url: string, body: Buffer, contentType: string) {
-    const match = /^fake:\/\/([^?]+)\?op=put&maxBytes=(\d+)$/.exec(url);
+    const fake = /^fake:\/\/([^?]+)\?op=put&maxBytes=(\d+)$/.exec(url);
+    const dev = /\/v1\/dev\/fake-s3\/([^?]+)\?maxBytes=(\d+)$/.exec(url);
+    const match = fake ?? (dev ? [dev[0], decodeURIComponent(dev[1]!), dev[2]] : null);
     if (!match) throw new Error(`not a fake presigned PUT url: ${url}`);
     if (body.length > Number(match[2])) throw new Error('EntityTooLarge');
     this.objects.set(match[1]!, { body, contentType });
@@ -192,20 +253,25 @@ export class FakeObjectStore implements ObjectStore {
   }
 
   keys(): string[] {
-    return [...this.objects.keys()];
+    return this.objects.keys();
   }
 }
 
 /** Builds the configured store; config validation already refused `fake` in production. */
 export function createObjectStore(config: {
-  OBJECT_STORE: 's3' | 'minio' | 'fake';
+  OBJECT_STORE: 's3' | 'minio' | 'fake' | 'local';
+  LOCAL_STORE_DIR?: string;
   S3_BUCKET?: string;
   S3_REGION?: string;
   S3_ENDPOINT?: string;
   S3_ACCESS_KEY_ID?: string;
   S3_SECRET_ACCESS_KEY?: string;
+  FAKE_S3_PUBLIC_BASE?: string;
 }): ObjectStore {
-  if (config.OBJECT_STORE === 'fake') return new FakeObjectStore(config.S3_BUCKET ?? 'fake-bucket');
+  if (config.OBJECT_STORE === 'fake') return new FakeObjectStore(config.S3_BUCKET ?? 'fake-bucket', config.FAKE_S3_PUBLIC_BASE);
+  if (config.OBJECT_STORE === 'local') {
+    return new FakeObjectStore(config.S3_BUCKET ?? 'local', config.FAKE_S3_PUBLIC_BASE ?? '', config.LOCAL_STORE_DIR ?? '.data/objects');
+  }
   const credentials =
     config.S3_ACCESS_KEY_ID && config.S3_SECRET_ACCESS_KEY
       ? { accessKeyId: config.S3_ACCESS_KEY_ID, secretAccessKey: config.S3_SECRET_ACCESS_KEY }

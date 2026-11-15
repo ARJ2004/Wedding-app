@@ -113,5 +113,31 @@ if (want('palette-')) {
   }
 }
 
+// Import flow last: it adds guests to the demo wedding.
+if (want('import-')) {
+  const sample = path.resolve(here, '../../../docs/samples/guest-list-sample.xlsx');
+  const { ctx, page } = await session();
+  await tab(page, 'tab-guests', 'screen-guests');
+  await page.getByTestId('open-import').click();
+  await page.getByTestId('screen-import').waitFor();
+  await shot(page, 'import-01-start');
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByTestId('import-pick').click();
+  await (await chooser).setFiles(sample);
+  await page.getByTestId('import-continue').waitFor({ timeout: 30000 });
+  await shot(page, 'import-02-mapping');
+  await page.getByTestId('import-continue').click();
+  await page.getByTestId('import-commit').waitFor({ timeout: 30000 });
+  await shot(page, 'import-03-preview');
+  await page.getByTestId('import-commit').click();
+  await page.getByTestId('import-done').waitFor({ timeout: 30000 });
+  await shot(page, 'import-04-done');
+  await page.getByTestId('import-back').click();
+  await page.getByTestId('guest-search').fill('Suresh');
+  await page.waitForTimeout(1200);
+  await shot(page, 'import-05-guest-list');
+  await ctx.close();
+}
+
 await browser.close();
 for (const c of children) c.kill();

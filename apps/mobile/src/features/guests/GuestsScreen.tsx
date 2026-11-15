@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useT } from '../../i18n/useT';
 import { useSession } from '../../lib/session';
-import { Chip, ChipRow, EmptyState, ErrorState, Loading, Screen, Text, TextField } from '../../ui';
+import { Button, Chip, ChipRow, EmptyState, ErrorState, Loading, Screen, Text, TextField } from '../../ui';
 import { useGroups, useParties } from './hooks';
 import { PartyRow } from './PartyRow';
 
-export function GuestsScreen() {
+export function GuestsScreen({ onImport }: { onImport?: () => void }) {
   const t = useT();
   const weddingId = useSession((s) => s.weddingId)!;
   const [q, setQ] = useState('');
@@ -14,7 +14,7 @@ export function GuestsScreen() {
   const parties = useParties(weddingId, q.trim(), groupId);
 
   return (
-    <Screen testID="screen-guests">
+    <Screen testID="screen-guests" footer={onImport ? <Button label={t('guests.import')} variant="secondary" onPress={onImport} testID="open-import" /> : undefined}>
       <Text variant="headline">{t('guests.title')}</Text>
       <TextField label={t('guests.search')} value={q} onChangeText={setQ} autoCorrect={false} testID="guest-search" />
       <ChipRow>

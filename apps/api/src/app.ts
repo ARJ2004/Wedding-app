@@ -18,6 +18,7 @@ import { guestRoutes } from './modules/guests';
 import { importRoutes, ImportService } from './modules/guests/import';
 import { MediaService, mediaRoutes } from './modules/media';
 import { healthRoutes } from './modules/health';
+import { fakeS3Router } from './modules/dev/fake-s3';
 import { opsRoutes } from './modules/ops';
 import { orgRoutes } from './modules/team';
 import { weddingRoutes } from './modules/weddings';
@@ -52,6 +53,8 @@ export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = 
       },
     }),
   );
+  const devS3 = deps.config.NODE_ENV !== 'production' ? fakeS3Router(deps.objectStore) : null;
+  if (devS3) app.use(devS3); // before express.json: takes raw bodies
   app.use(express.json({ limit: '256kb' }));
   app.use(limit(deps.config.RATE_LIMIT_PER_MINUTE));
   app.use('/v1/auth', limit(deps.config.AUTH_RATE_LIMIT_PER_MINUTE, 'AUTH_RATE_LIMITED'));

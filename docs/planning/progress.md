@@ -51,7 +51,7 @@ Tracked by the Ralph loop (`.claude/ralph/PROMPT.md`). Status: `todo`, `doing`, 
 | Story | Title | Pts | Status | Note |
 | --- | --- | --- | --- | --- |
 | GST-02a | Import pipeline + API | 5 | done | Import pipeline: xlsx (cached formula values only) / csv (BOM), Hinglish header suggestions, mapping → validate job (normalise, party grouping, members cell, kids), preview rows, actions, idempotent commit job (resumable batches, groups/sides), errors.csv (CSV-injection safe), cancel, one import per wedding. |
-| GST-02b | Import mobile flow | 3 | todo | |
+| GST-02b | Import mobile flow | 3 | done | App import flow: file picker (native document picker / web input), presigned upload, mapping chips (current choice first), live progress polling, preview stats + problem rows, idempotent commit, done → guest list. Dev: OBJECT_STORE=local disk store shared by API + worker, dev-only upload sink. Sample sheet: docs/samples/guest-list-sample.xlsx. Screenshots: docs/screenshots/import-*. |
 | GST-05a | In-import duplicates | 1 | done | In-file duplicate phones and existing-guest phone matches flagged as duplicate (default skip, can merge). |
 | GST-06 | Groups and tags | 3 | todo | |
 | GST-07a | Search, filters, export | 3 | todo | |

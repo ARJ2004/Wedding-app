@@ -3,7 +3,7 @@ import request from 'supertest';
 import { createApp } from '../src/app';
 import type { InlineJobQueue } from '../src/common/jobs';
 import type { FakeObjectStore } from '../src/common/object-store';
-import { closePrisma, resetData, signInHost, silentLogger, testDeps, testPrisma } from './helpers';
+import { boot, closePrisma, resetData, signInHost, silentLogger, testDeps, testPrisma } from './helpers';
 
 beforeEach(resetData);
 afterAll(closePrisma);
@@ -144,5 +144,21 @@ describe('guest import (GST-02a, GST-05a)', () => {
     await jobs.drain(silentLogger);
     const parties = await request(app).get(`${W}/parties`).set(owner.auth).expect(200);
     expect(parties.body.items[0].members.map((m: { fullName: string }) => m.fullName)).toEqual(['Kiran Rao', 'Asha', 'Child 1', 'Child 2']);
+  });
+});
+
+describe('dev fake S3 sink', () => {
+  it('accepts a real HTTP PUT to the presigned URL when the fake store has a public base', async () => {
+    const { FakeObjectStore } = await import('../src/common/object-store');
+    const store2 = new FakeObjectStore('fake-bucket', '');
+    const d = testDeps({ objectStore: store2 });
+    const app2 = createApp(d).app;
+    const owner = await signInHost(app2, 'sink@example.com');
+    const w = await request(app2).post('/v1/weddings').set(owner.auth).send({ title: 'Sink test', startsOn: '2027-01-01', endsOn: '2027-01-01' }).expect(201);
+    const t = await request(app2).post(`/v1/weddings/${w.body.id}/uploads`).set(owner.auth).send({ purpose: 'import', contentType: 'text/csv', byteSize: 9 }).expect(201);
+    expect(t.body.uploadUrl).toMatch(/^\/v1\/dev\/fake-s3\//);
+    await request(app2).put(t.body.uploadUrl).set('Content-Type', 'text/csv').send(Buffer.from('Name\nAsha')).expect(200);
+    await request(app2).post(`/v1/uploads/${t.body.mediaId}/complete`).set(owner.auth).expect(200);
+    await request(boot({ config: { NODE_ENV: 'production' } })).put(t.body.uploadUrl).send('x').expect(404); // never in production
   });
 });
