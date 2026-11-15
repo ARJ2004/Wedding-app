@@ -23,6 +23,8 @@ interface RouteSpec<P extends ZodTypeAny, Q extends ZodTypeAny, B extends ZodTyp
   auth: RouteAuth;
   /** Wedding-scoped host routes: the `can()` action checked after loading membership from :weddingId. */
   permission?: Action;
+  /** Extra middleware after auth/permission, e.g. idempotent(). */
+  before?: RequestHandler[];
   request?: { params?: P; query?: Q; body?: B };
   /** Success status and schema; error responses are added automatically. */
   response: { status: 200 | 201 | 202; schema: R } | { status: 204 };
@@ -91,6 +93,7 @@ export function defineRoute<
     if (spec.auth !== 'host') throw new Error(`permission needs host auth: ${spec.path}`);
     chain.push(guards.requirePermission(spec.permission));
   }
+  chain.push(...(spec.before ?? []));
 
   router[spec.method](spec.path, ...chain, async (req: Request, res: Response) => {
     const params = (spec.request?.params ? spec.request.params.parse(req.params) : req.params) as z.infer<P>;

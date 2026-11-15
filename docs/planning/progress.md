@@ -50,14 +50,14 @@ Tracked by the Ralph loop (`.claude/ralph/PROMPT.md`). Status: `todo`, `doing`, 
 
 | Story | Title | Pts | Status | Note |
 | --- | --- | --- | --- | --- |
-| GST-02a | Import pipeline + API | 5 | todo | |
+| GST-02a | Import pipeline + API | 5 | done | Import pipeline: xlsx (cached formula values only) / csv (BOM), Hinglish header suggestions, mapping → validate job (normalise, party grouping, members cell, kids), preview rows, actions, idempotent commit job (resumable batches, groups/sides), errors.csv (CSV-injection safe), cancel, one import per wedding. |
 | GST-02b | Import mobile flow | 3 | todo | |
-| GST-05a | In-import duplicates | 1 | todo | |
+| GST-05a | In-import duplicates | 1 | done | In-file duplicate phones and existing-guest phone matches flagged as duplicate (default skip, can merge). |
 | GST-06 | Groups and tags | 3 | todo | |
 | GST-07a | Search, filters, export | 3 | todo | |
 | SET-05 | Key contacts | 1 | todo | |
 | SET-06 | Wedding settings + cover | 3 | todo | |
-| CAM-01a | Upload core | 2 | todo | |
+| CAM-01a | Upload core | 2 | done | media module: upload policy registry (cover, import), POST /v1/weddings/:id/uploads → presigned PUT, POST /v1/uploads/:id/complete (HEAD + size check) → media.process job. Needs credentials: S3 bucket (MinIO/fake in dev). |
 | APP-05a | Store release pipeline | 3 | todo | |
 | OPS-04a | Device lab setup (S4) | 1 | todo | |
 

@@ -38,7 +38,13 @@ export function toParty(p: PartyRow, role: WeddingRole) {
   const contact = can(role, 'guest.contact.read');
   const members = p.guests
     .filter((g) => !g.deleted_at)
-    .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.created_at.getTime() - b.created_at.getTime())
+    // Primary first, then adults, then children; creation order within each.
+    .sort(
+      (a, b) =>
+        Number(b.is_primary) - Number(a.is_primary) ||
+        Number(a.age_band === 'child') - Number(b.age_band === 'child') ||
+        a.created_at.getTime() - b.created_at.getTime(),
+    )
     .map((g) => toGuest(g, role));
   return {
     id: p.id,

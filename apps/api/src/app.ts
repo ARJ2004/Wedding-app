@@ -15,6 +15,8 @@ import { createVerifiers, type IdTokenVerifier } from './common/auth/verifiers';
 import type { RouteContext } from './common/define-route';
 import { authRoutes } from './modules/auth';
 import { guestRoutes } from './modules/guests';
+import { importRoutes, ImportService } from './modules/guests/import';
+import { MediaService, mediaRoutes } from './modules/media';
 import { healthRoutes } from './modules/health';
 import { opsRoutes } from './modules/ops';
 import { orgRoutes } from './modules/team';
@@ -62,6 +64,9 @@ export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = 
   weddingRoutes(ctx, deps);
   guestRoutes(ctx, deps);
   orgRoutes(ctx, deps);
+  const media = new MediaService(deps);
+  mediaRoutes(ctx, media);
+  importRoutes(ctx, new ImportService({ prisma: deps.prisma, jobs: deps.jobs, media }), deps.prisma);
   opsRoutes(ctx, { prisma: deps.prisma, jobs: deps.jobs, opsAdmins });
   app.use(ctx.router);
 
