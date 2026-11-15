@@ -253,6 +253,39 @@ if (want('import-')) {
   await ctx.close();
 }
 
+if (want('msg-')) {
+  // MSG-03: messages list, composer with a live audience count, saved preview and a test send.
+  for (const scheme of ['light', 'dark']) {
+    const { ctx, page } = await session({ scheme });
+    await page.getByTestId('tab-messages').click();
+    await page.getByTestId('screen-messages').waitFor();
+    if (scheme === 'light') await shot(page, 'msg-01-list');
+    await page.getByTestId('msg-new').click();
+    await page.getByTestId('screen-composer').waitFor();
+    await page.getByTestId('msg-title').fill('Baraat bus timing');
+    await page.getByTestId('msg-body').fill('Buses leave the hotel lobby at 4:15 pm sharp. Safas are handed out on the bus.');
+    await page.getByTestId('aud-events').click();
+    await page.getByTestId('aud-event-Baraat').click();
+    await page.getByTestId('aud-event-Haldi').click();
+    await page.getByTestId('aud-pending').click();
+    await page.waitForTimeout(1200);
+    await shot(page, `msg-02-composer-audience-${scheme}`);
+    await page.getByTestId('msg-save').click();
+    await page.getByTestId('msg-preview').waitFor({ timeout: 15000 });
+    await page.getByTestId('msg-test').click();
+    await page.getByTestId('msg-notice').filter({ hasText: 'Test sent' }).waitFor({ timeout: 15000 });
+    await page.getByTestId('msg-preview').scrollIntoViewIfNeeded();
+    await shot(page, `msg-03-preview-test-sent-${scheme}`);
+    if (scheme === 'light') {
+      await page.getByTestId('msg-back').click();
+      await page.getByTestId('screen-messages').waitFor();
+      await page.waitForTimeout(800);
+      await shot(page, 'msg-04-list-with-draft');
+    }
+    await ctx.close();
+  }
+}
+
 if (want('live-')) {
   // FND-14: host home follows the headcount channel over SSE; the badge shows once the stream is open.
   for (const scheme of ['light', 'dark']) {

@@ -6483,6 +6483,695 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/weddings/{weddingId}/messages': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List messages (newest first) */
+    get: {
+      parameters: {
+        query?: {
+          status?: string;
+        };
+        header?: never;
+        path: {
+          weddingId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              items: components['schemas']['Message'][];
+            };
+          };
+        };
+        /** @description Error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /** Create an announcement draft (send an Idempotency-Key) */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          weddingId: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            templateKey: string;
+            title?: string | null;
+            bodyText: string;
+            /**
+             * @default en
+             * @enum {string}
+             */
+            sourceLanguage?: 'en' | 'hi' | 'kn';
+            /** Format: uuid */
+            mediaId?: string | null;
+            /**
+             * @default guest_home
+             * @enum {string}
+             */
+            linkTarget?: 'none' | 'guest_home' | 'schedule' | 'travel' | 'rsvp' | 'gallery';
+            audience?: components['schemas']['AudienceSpec'];
+            /**
+             * @default [
+             *       "whatsapp",
+             *       "push"
+             *     ]
+             */
+            channels?: ('whatsapp' | 'push')[];
+            /** @default true */
+            smsFallback?: boolean;
+            /** @default 10 */
+            fallbackAfterMinutes?: number;
+          };
+        };
+      };
+      responses: {
+        /** @description Success */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Message'];
+          };
+        };
+        /** @description Error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/weddings/{weddingId}/messages/{messageId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** One message */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          weddingId: string;
+          messageId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Message'];
+          };
+        };
+        /** @description Error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Edit a draft or scheduled message (send its version) */
+    patch: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          weddingId: string;
+          messageId: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            templateKey?: string;
+            title?: string | null;
+            bodyText?: string;
+            /**
+             * @default en
+             * @enum {string}
+             */
+            sourceLanguage?: 'en' | 'hi' | 'kn';
+            /** Format: uuid */
+            mediaId?: string | null;
+            /**
+             * @default guest_home
+             * @enum {string}
+             */
+            linkTarget?: 'none' | 'guest_home' | 'schedule' | 'travel' | 'rsvp' | 'gallery';
+            audience?: components['schemas']['AudienceSpec'];
+            /**
+             * @default [
+             *       "whatsapp",
+             *       "push"
+             *     ]
+             */
+            channels?: ('whatsapp' | 'push')[];
+            /** @default true */
+            smsFallback?: boolean;
+            /** @default 10 */
+            fallbackAfterMinutes?: number;
+            version: number;
+          };
+        };
+      };
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Message'];
+          };
+        };
+        /** @description Error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    trace?: never;
+  };
+  '/v1/weddings/{weddingId}/messages/audience-preview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Who would receive this audience, by channel and language */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          weddingId: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            audience: components['schemas']['AudienceSpec'];
+            templateKey?: string;
+            channels?: ('whatsapp' | 'push')[];
+          };
+        };
+      };
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['AudiencePreview'];
+          };
+        };
+        /** @description Error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/weddings/{weddingId}/messages/{messageId}/preview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Rendered WhatsApp and push text for a language */
+    get: {
+      parameters: {
+        query?: {
+          language?: 'en' | 'hi' | 'kn';
+        };
+        header?: never;
+        path: {
+          weddingId: string;
+          messageId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MessagePreview'];
+          };
+        };
+        /** @description Error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/weddings/{weddingId}/messages/{messageId}/test': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Send this message to your own WhatsApp (10 a day) */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          weddingId: string;
+          messageId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              sentTo: string;
+              providerMessageId: string;
+            };
+          };
+        };
+        /** @description Error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        502: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/v1/ops/jobs': {
     parameters: {
       query?: never;
@@ -7192,6 +7881,84 @@ export interface components {
       }[];
       /** @enum {string} */
       header: 'none' | 'image';
+    };
+    Message: {
+      /** Format: uuid */
+      id: string;
+      kind: string;
+      /** @enum {string} */
+      status: 'draft' | 'scheduled' | 'resolving' | 'sending' | 'sent' | 'cancelled' | 'failed';
+      version: number;
+      templateKey: string | null;
+      title: string | null;
+      bodyText: string | null;
+      /** @enum {string} */
+      sourceLanguage: 'en' | 'hi' | 'kn';
+      mediaId: string | null;
+      linkTarget: string | null;
+      audience: components['schemas']['AudienceSpec'];
+      channels: ('whatsapp' | 'push')[];
+      smsFallback: boolean;
+      fallbackAfterMinutes: number;
+      scheduledAt: string | null;
+      recipientCount: number | null;
+      stats: {
+        [key: string]: unknown;
+      };
+      createdAt: string;
+      updatedAt: string;
+    };
+    AudienceSpec: {
+      groups?: string[];
+      events?: string[];
+      rsvp?: {
+        /** Format: uuid */
+        eventId: string;
+        statuses: ('attending' | 'declined' | 'maybe' | 'pending')[];
+      };
+      partyIds?: string[];
+      guestIds?: string[];
+      filters?: {
+        name: string;
+        /** @default {} */
+        args: {
+          [key: string]: unknown;
+        };
+      }[];
+    };
+    AudiencePreview: {
+      recipients: number;
+      byChannel: {
+        whatsapp: number;
+        push: number;
+      };
+      byLanguage: {
+        [key: string]: number;
+      };
+      suppressed: {
+        noPhone: number;
+        optedOut: number;
+        duplicatePhone: number;
+      };
+      missingTemplateLanguages: ('en' | 'hi' | 'kn')[];
+      unitsNeeded: number;
+      quota: {
+        limit: number;
+        used: number;
+        reserved: number;
+      } | null;
+    };
+    MessagePreview: {
+      /** @enum {string} */
+      language: 'en' | 'hi' | 'kn';
+      whatsapp: {
+        text: string;
+        hasImage: boolean;
+      };
+      push: {
+        title: string;
+        body: string;
+      };
     };
     FailedJob: {
       id: string;

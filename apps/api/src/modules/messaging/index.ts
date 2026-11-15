@@ -6,3 +6,5 @@ export { TemplateService } from './templates/service';
 export { CATALOGUE, checkCatalogue } from './templates/catalogue';
 export { ReplyRouter, type InboundReplyCommand, type InboundReplyHandler, type InboundReplyResult } from './replies/router';
 export { decodeReply, encodeReplyPayload } from './replies/codec';
+export { messageRoutes, renderTemplate } from './messages';
+export { AudienceSpec, registerAudienceFilter, resolveAudience, type AudienceMember } from './audience';

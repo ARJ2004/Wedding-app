@@ -7,8 +7,10 @@ import { WelcomeScreen } from '../features/auth-host';
 import { EventsScreen } from '../features/events';
 import { ConsentScreen, GuestEntryFlow, GuestHomeScreen, GuestMeScreen, RsvpScreen } from '../features/guest';
 import { GuestsScreen, ImportScreen } from '../features/guests';
+import { ComposerScreen, MessagesScreen } from '../features/messages';
+import { can } from '@mehfil/domain';
 import { MoreScreen } from '../features/settings';
-import { CreateWeddingScreen, HostHomeScreen, useApplyWeddingPalette, WeddingPickerScreen, WeddingSettingsScreen } from '../features/weddings';
+import { CreateWeddingScreen, HostHomeScreen, useApplyWeddingPalette, useWedding, WeddingPickerScreen, WeddingSettingsScreen } from '../features/weddings';
 import { useT } from '../i18n/useT';
 import { parseInviteToken, useGuestSession, useMode } from '../lib/guest-session';
 import { useSession } from '../lib/session';
@@ -18,7 +20,8 @@ import { Loading, Screen, Text } from '../ui';
 type WelcomeStack = { Welcome: undefined };
 type GuestTabsList = { GuestHome: undefined; Rsvp: undefined; Me: undefined };
 type PickerStack = { Picker: undefined; CreateWedding: undefined };
-type HostTabs = { Home: undefined; Events: undefined; Guests: undefined; More: undefined };
+type HostTabs = { Home: undefined; Events: undefined; Guests: undefined; Messages: undefined; More: undefined };
+type MessagesStack = { MessageList: undefined; Composer: { messageId: string | null } };
 type GuestsStack = { GuestList: undefined; Import: undefined };
 type MoreStack = { MoreHome: undefined; WeddingSettings: undefined };
 
@@ -27,6 +30,18 @@ const Picker = createNativeStackNavigator<PickerStack>();
 const Tabs = createBottomTabNavigator<HostTabs>();
 const Guests = createNativeStackNavigator<GuestsStack>();
 const More = createNativeStackNavigator<MoreStack>();
+const Msgs = createNativeStackNavigator<MessagesStack>();
+
+function MessagesNavigator() {
+  return (
+    <Msgs.Navigator screenOptions={{ headerShown: false }}>
+      <Msgs.Screen name="MessageList">
+        {({ navigation }) => <MessagesScreen onCompose={() => navigation.navigate('Composer', { messageId: null })} onOpen={(id) => navigation.navigate('Composer', { messageId: id })} />}
+      </Msgs.Screen>
+      <Msgs.Screen name="Composer">{({ navigation, route }) => <ComposerScreen messageId={route.params.messageId} onDone={() => navigation.goBack()} />}</Msgs.Screen>
+    </Msgs.Navigator>
+  );
+}
 
 function MoreNavigator() {
   return (
@@ -46,7 +61,7 @@ function GuestsNavigator() {
   );
 }
 
-const TAB_GLYPH: Record<keyof HostTabs, string> = { Home: '⌂', Events: '◷', Guests: '☺', More: '≡' };
+const TAB_GLYPH: Record<keyof HostTabs, string> = { Home: '⌂', Events: '◷', Guests: '☺', Messages: '✉', More: '≡' };
 
 const GuestTabs = createBottomTabNavigator<GuestTabsList>();
 const GUEST_GLYPH: Record<keyof GuestTabsList, string> = { GuestHome: '⌂', Rsvp: '✓', Me: '☺' };
@@ -122,7 +137,9 @@ function PickerNavigator() {
 function HostNavigator() {
   const t = useT();
   const theme = useTheme();
-  useApplyWeddingPalette(useSession((st) => st.weddingId)!);
+  const weddingId = useSession((st) => st.weddingId)!;
+  useApplyWeddingPalette(weddingId);
+  const role = useWedding(weddingId).data?.myRole;
   return (
     <Tabs.Navigator
       screenOptions={({ route }) => ({
@@ -141,6 +158,9 @@ function HostNavigator() {
       <Tabs.Screen name="Home" component={HostHomeScreen} options={{ title: t('tabs.home'), tabBarButtonTestID: 'tab-home' }} />
       <Tabs.Screen name="Events" component={EventsScreen} options={{ title: t('tabs.events'), tabBarButtonTestID: 'tab-events' }} />
       <Tabs.Screen name="Guests" component={GuestsNavigator} options={{ title: t('tabs.guests'), tabBarButtonTestID: 'tab-guests' }} />
+      {role && can(role, 'message.read') ? (
+        <Tabs.Screen name="Messages" component={MessagesNavigator} options={{ title: t('tabs.messages'), tabBarButtonTestID: 'tab-messages' }} />
+      ) : null}
       <Tabs.Screen name="More" component={MoreNavigator} options={{ title: t('tabs.more'), tabBarButtonTestID: 'tab-more' }} />
     </Tabs.Navigator>
   );

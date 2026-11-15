@@ -14,11 +14,11 @@ const LINK_KEY = process.env.LINK_TOKEN_KEY ?? 'dev-only-link-token-key-change-m
  */
 export const DEMO_WEDDING_ID = '00000000-0000-4000-8000-00000000d0e0';
 const DEV_USERS = [
-  { email: 'owner@mehfil.local', name: 'Asha (owner)', role: 'owner' },
+  { email: 'owner@mehfil.local', name: 'Asha (owner)', role: 'owner', phone: '+919000099001' },
   { email: 'cohost@mehfil.local', name: 'Vikram (co-host)', role: 'co_host' },
   { email: 'planner@mehfil.local', name: 'Meera (planner)', role: 'planner_member' },
   { email: 'desk@mehfil.local', name: 'Ravi (desk)', role: 'desk_staff' },
-] as const;
+] as const satisfies readonly { email: string; name: string; role: string; phone?: string }[];
 
 const FIRST = ['Aarav', 'Diya', 'Kabir', 'Ishaan', 'Anika', 'Rohan', 'Saanvi', 'Arjun', 'Meera', 'Vivaan', 'Nisha', 'Kiran'];
 const LAST = ['Sharma', 'Iyer', 'Reddy', 'Patil', 'Gowda', 'Nair', 'Mehta', 'Kulkarni', 'Rao', 'Hegde'];
@@ -34,8 +34,8 @@ export async function seed(prisma: PrismaClient, log: (line: string) => void = (
     users.push(
       await prisma.users.upsert({
         where: { google_sub: `dev|${u.email}` },
-        update: { name: u.name },
-        create: { google_sub: `dev|${u.email}`, email: u.email, name: u.name },
+        update: { name: u.name, phone_e164: 'phone' in u ? u.phone : null },
+        create: { google_sub: `dev|${u.email}`, email: u.email, name: u.name, phone_e164: 'phone' in u ? u.phone : null },
       }),
     );
   }
