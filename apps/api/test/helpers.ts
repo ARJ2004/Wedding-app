@@ -35,8 +35,27 @@ export function boot(overrides: Parameters<typeof testDeps>[0] = {}) {
   return createApp(testDeps(overrides)).app;
 }
 
-/** Empties the given tables between test files (CASCADE follows FKs). */
+/** Empties the given tables between test files (CASCADE follows FKs; the append-only audit trigger allows TRUNCATE). */
 export async function truncate(...tables: string[]) {
   if (tables.length === 0) return;
   await testPrisma().$executeRawUnsafe(`TRUNCATE ${tables.join(', ')} RESTART IDENTITY CASCADE`);
+}
+
+export const DEVICE = 'test-device-0123456789';
+
+/** Signs a host in through the real endpoint with the dev bypass; returns tokens and user id. */
+export async function signInHost(app: Parameters<typeof import('supertest')>[0], email: string) {
+  const request = (await import('supertest')).default;
+  const res = await request(app).post('/v1/auth/google').send({ idToken: `dev:${email}`, deviceId: DEVICE }).expect(200);
+  return {
+    userId: res.body.user.id as string,
+    accessToken: res.body.accessToken as string,
+    refreshToken: res.body.refreshToken as string,
+    auth: { Authorization: `Bearer ${res.body.accessToken}` },
+  };
+}
+
+/** Wipes everything the host-side tests create (keeps pg-boss's own schema). */
+export async function resetData() {
+  await truncate('audit_log', 'refresh_tokens', 'idempotency_keys', 'weddings', 'organizations', 'users');
 }

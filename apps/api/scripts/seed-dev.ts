@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
+import { normalisePhone } from '@mehfil/domain';
 
 /**
  * Dev seed (FND-15): dev users for each role, one planner org, one demo wedding with venues,
@@ -135,8 +136,11 @@ export async function seed(prisma: PrismaClient, log: (line: string) => void = (
           party_id: party.id,
           is_primary: g === 0,
           full_name: `${FIRST[(p + g * 3) % FIRST.length]} ${last}`,
-          // Fictional numbers in a block not assigned to real subscribers in the demo data.
-          phone_e164: g < 2 ? `+9190000${String(p * 10 + g).padStart(5, '0')}` : null,
+          // Fictional demo numbers, normalised exactly like a host entry (GST-04).
+          ...(() => {
+            const n = normalisePhone(g < 2 ? `+91 90000 ${String(p * 10 + g).padStart(5, '0')}` : null);
+            return { phone_e164: n.e164, phone_status: n.status, phone_raw: n.status === 'valid' ? null : n.raw };
+          })(),
           age_band: g === 3 ? 'child' : p % 6 === 0 && g === 1 ? 'senior' : 'adult',
         },
       });

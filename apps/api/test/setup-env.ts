@@ -8,3 +8,5 @@ process.env.OBJECT_STORE ??= 'fake';
 process.env.MESSAGING_PROVIDER ??= 'log';
 process.env.OPENAPI_DOCS ??= 'true';
 process.env.LOG_LEVEL ??= 'silent';
+process.env.RATE_LIMIT_PER_MINUTE ??= '100000';
+process.env.AUTH_RATE_LIMIT_PER_MINUTE ??= '100000';

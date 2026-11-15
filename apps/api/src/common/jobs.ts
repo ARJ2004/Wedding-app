@@ -43,6 +43,19 @@ export interface SendOptions {
 /** What API modules see: enqueue only. Handlers run in the worker process. */
 export interface JobQueue {
   send<S extends z.ZodTypeAny>(job: JobDefinition<S>, payload: z.infer<S>, opts?: SendOptions): Promise<string | null>;
+  /** Ops view (FND-06b): failed and dead-lettered jobs, newest first. Never includes payloads. */
+  failed(limit: number): Promise<FailedJob[]>;
+  /** Re-queue a failed or dead-lettered job onto its original queue. */
+  retry(jobId: string): Promise<boolean>;
+}
+
+export interface FailedJob {
+  id: string;
+  queue: string;
+  deadLettered: boolean;
+  attempts: number;
+  error: string | null;
+  failedAt: string;
 }
 
 export const DLQ_SUFFIX = '.dlq';
@@ -95,6 +108,43 @@ export class PgBossJobQueue implements JobQueue {
     return this.boss.send(job.name, data, options);
   }
 
+  async failed(limit: number): Promise<FailedJob[]> {
+    const db = this.boss.getDb();
+    const res = (await db.executeSql(
+      `SELECT id, name, state, retry_count, output->>'message' AS error, completed_on, created_on
+       FROM pgboss.job
+       WHERE state = 'failed' OR (name LIKE '%${DLQ_SUFFIX}' AND state IN ('created','retry'))
+       ORDER BY COALESCE(completed_on, created_on) DESC LIMIT $1`,
+      [limit],
+    )) as { rows: { id: string; name: string; retry_count: number; error: string | null; completed_on: Date | null; created_on: Date }[] };
+    return res.rows.map((r) => ({
+      id: r.id,
+      queue: r.name.endsWith(DLQ_SUFFIX) ? r.name.slice(0, -DLQ_SUFFIX.length) : r.name,
+      deadLettered: r.name.endsWith(DLQ_SUFFIX),
+      attempts: r.retry_count + 1,
+      error: r.error,
+      failedAt: (r.completed_on ?? r.created_on).toISOString(),
+    }));
+  }
+
+  async retry(jobId: string): Promise<boolean> {
+    const db = this.boss.getDb();
+    const res = (await db.executeSql(`SELECT id, name, state, data FROM pgboss.job WHERE id = $1`, [jobId])) as {
+      rows: { id: string; name: string; state: string; data: object }[];
+    };
+    const job = res.rows[0];
+    if (!job) return false;
+    if (job.name.endsWith(DLQ_SUFFIX)) {
+      const original = job.name.slice(0, -DLQ_SUFFIX.length);
+      await this.boss.send(original, job.data ?? {});
+      await this.boss.deleteJob(job.name, job.id);
+      return true;
+    }
+    if (job.state !== 'failed') return false;
+    await this.boss.retry(job.name, job.id);
+    return true;
+  }
+
   /** Worker only: registers handlers (and cron schedules) for every job definition. */
   async register(jobs: JobDefinition[], opts: { pollingIntervalSeconds?: number } = {}) {
     for (const job of jobs) {
@@ -134,6 +184,14 @@ export class InlineJobQueue implements JobQueue {
     this.defs.set(job.name, job as unknown as JobDefinition);
     this.sent.push({ name: job.name, payload: data, opts });
     return `inline-${this.sent.length}`;
+  }
+
+  async failed(): Promise<FailedJob[]> {
+    return [];
+  }
+
+  async retry(): Promise<boolean> {
+    return false;
   }
 
   async drain(logger: Logger) {

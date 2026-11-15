@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Router } from 'express';
 import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import swaggerUi from 'swagger-ui-express';
@@ -9,7 +9,15 @@ import { buildOpenApiDocument, createRegistry } from './common/openapi';
 import { limit } from './common/rate-limit';
 import { requestId } from './common/request-id';
 import type { Deps } from './deps';
-import { healthRouter } from './modules/health';
+import { createGuards } from './common/auth/guards';
+import { TokenService } from './common/auth/tokens';
+import { createVerifiers, type IdTokenVerifier } from './common/auth/verifiers';
+import type { RouteContext } from './common/define-route';
+import { authRoutes } from './modules/auth';
+import { guestRoutes } from './modules/guests';
+import { healthRoutes } from './modules/health';
+import { opsRoutes } from './modules/ops';
+import { weddingRoutes } from './modules/weddings';
 
 function packageVersion(): string {
   const pkg = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf8')) as { version: string };
@@ -20,7 +28,7 @@ function packageVersion(): string {
  * Builds the Express app. Used by main.ts, the OpenAPI emit script and every e2e test,
  * so the middleware order below is the one production runs (01-fnd §4).
  */
-export function createApp(deps: Deps) {
+export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = {}) {
   const version = packageVersion();
   const registry = createRegistry();
   const app = express();
@@ -42,8 +50,17 @@ export function createApp(deps: Deps) {
   );
   app.use(express.json({ limit: '256kb' }));
   app.use(limit(deps.config.RATE_LIMIT_PER_MINUTE));
+  app.use('/v1/auth', limit(deps.config.AUTH_RATE_LIMIT_PER_MINUTE, 'AUTH_RATE_LIMITED'));
 
-  app.use(healthRouter(deps, registry, version));
+  const tokens = new TokenService(deps.prisma, deps.config);
+  const ctx: RouteContext = { router: Router(), registry, guards: createGuards({ prisma: deps.prisma, tokens }) };
+  const opsAdmins = deps.config.OPS_ADMIN_EMAILS;
+  healthRoutes(ctx, deps, version);
+  authRoutes(ctx, { prisma: deps.prisma, tokens, verifiers: opts.verifiers ?? createVerifiers(deps.config), opsAdmins });
+  weddingRoutes(ctx, deps);
+  guestRoutes(ctx, deps);
+  opsRoutes(ctx, { prisma: deps.prisma, jobs: deps.jobs, opsAdmins });
+  app.use(ctx.router);
 
   const openApiDocument = buildOpenApiDocument(registry, version);
   if (deps.config.OPENAPI_DOCS) {

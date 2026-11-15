@@ -1,1 +1,1 @@
-module.exports = { preset: 'ts-jest', testEnvironment: 'node', roots: ['<rootDir>/src'], testRegex: '\\.spec\\.ts$' };
+module.exports = { preset: 'ts-jest', testEnvironment: 'node', roots: ['<rootDir>/src'], testRegex: '\\.spec\\.ts$', moduleNameMapper: { '^@mehfil/(domain|i18n)$': '<rootDir>/../../packages/$1/src' }, };

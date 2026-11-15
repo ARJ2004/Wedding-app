@@ -1,1 +1,1 @@
-export { healthRouter, HealthResponseSchema } from './router';
+export { healthRoutes, HealthResponseSchema } from './router';

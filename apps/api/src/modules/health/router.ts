@@ -1,7 +1,5 @@
-import type { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
-import { Router } from 'express';
 import { AppError } from '../../common/errors';
-import { defineRoute } from '../../common/define-route';
+import { defineRoute, type RouteContext } from '../../common/define-route';
 import { z } from '../../common/openapi';
 import type { Deps } from '../../deps';
 
@@ -18,10 +16,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   ]);
 }
 
-export function healthRouter(deps: Deps, registry: OpenAPIRegistry, version: string): Router {
-  const router = Router();
-
-  defineRoute(router, registry, {
+export function healthRoutes(ctx: RouteContext, deps: Deps, version: string): void {
+  defineRoute(ctx, {
     method: 'get',
     path: '/v1/health',
     summary: 'Liveness: the process is up',
@@ -31,7 +27,7 @@ export function healthRouter(deps: Deps, registry: OpenAPIRegistry, version: str
     handler: () => ({ status: 'ok' as const, version }),
   });
 
-  defineRoute(router, registry, {
+  defineRoute(ctx, {
     method: 'get',
     path: '/v1/health/ready',
     summary: 'Readiness: the database answers',
@@ -49,5 +45,4 @@ export function healthRouter(deps: Deps, registry: OpenAPIRegistry, version: str
     },
   });
 
-  return router;
 }

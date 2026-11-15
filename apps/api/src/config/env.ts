@@ -29,6 +29,14 @@ const EnvSchema = z.object({
   GOOGLE_WEB_CLIENT_ID: optionalString,
   SENTRY_DSN: optionalString,
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).default(300),
+  AUTH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).default(20),
+  ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).default(900),
+  REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).default(30),
+  /** Comma-separated emails allowed to use /v1/ops/* (failed jobs). Not a DB flag on purpose. */
+  OPS_ADMIN_EMAILS: z
+    .string()
+    .optional()
+    .transform((v) => (v ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)),
 });
 
 export type AppConfig = z.infer<typeof EnvSchema>;

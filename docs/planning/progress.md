@@ -29,19 +29,20 @@ Tracked by the Ralph loop (`.claude/ralph/PROMPT.md`). Status: `todo`, `doing`, 
 
 | Story | Title | Pts | Status | Note |
 | --- | --- | --- | --- | --- |
-| FND-05 | Host and staff auth | 5 | todo | |
-| FND-07 | AWS staging environment | 5 | todo | |
+| FND-05 | Host and staff auth | 5 | done | POST /v1/auth/google (Google verifier + dev bypass), /refresh (rotation, device-bound, reuse → all sessions revoked), /logout, /logout-all, GET /v1/me; separate host/guest secrets; auth rate limit. |
+| FND-07 | AWS staging environment | 5 | blocked: needs an AWS account, Mumbai region access and credentials (human) | IaC scripts can be written once access exists. |
 | FND-08 | Observability | 3 | todo | |
 | APP-01a | App shell, sessions and host sign-in | 5 | todo | |
-| ROL-04 | Organisation model | 3 | todo | |
-| ROL-02a | Matrix + enforcement scaffold (S2) | 2 | todo | |
-| ROL-03a | Audit writer (S2) | 1 | todo | |
-| SET-01 | Create a wedding | 3 | todo | |
-| SET-02 | Events with presets | 3 | todo | |
-| SET-03a | Venues + pasted map link | 3 | todo | |
-| GST-01 | Add/edit guests in parties | 5 | todo | |
-| GST-04 | Phone normalisation | 2 | todo | |
-| FND-06b | Ops job endpoints (/v1/ops/jobs, retry) — split from FND-06 | 1 | todo | |
+| ROL-04 | Organisation model | 3 | done | Partial: family org auto-created per wedding, planner-org weddings require a seat, org_owner/org_admin get implicit planner_member. Seat/org management endpoints split to ROL-04b. |
+| ROL-02a | Matrix + enforcement scaffold (S2) | 2 | done | packages/domain permissions.ts (matrix, can, canAssign); defineRoute `permission` → loadMembership (404 for outsiders) + can() (403 ROL_FORBIDDEN); desk-staff masking in serialisers. |
+| ROL-04b | Org seats and org management endpoints — split from ROL-04 | 2 | todo | |
+| ROL-03a | Audit writer (S2) | 1 | done | writeAudit() in-transaction + diff(); used by auth, weddings, events, venues, parties, guests. |
+| SET-01 | Create a wedding | 3 | done | POST/GET/PATCH /v1/weddings(+/:id): dates/timezone validation, owner membership, built-in groups, audit. |
+| SET-02 | Events with presets | 3 | done | Event presets, create/bulk-from-presets (wedding timezone), patch, reorder, soft delete + restore. |
+| SET-03a | Venues + pasted map link | 3 | done | Venues CRUD; pin from pasted Google/Apple Maps link (offline parser; short links later); cross-wedding venue rejected. |
+| GST-01 | Add/edit guests in parties | 5 | done | Parties with members: create/list (search name/label/last-4 digits, cursor), get, patch, delete; add/edit/remove guests; primary rules; groups list. |
+| GST-04 | Phone normalisation | 2 | done | normalisePhone (libphonenumber-js/max): 10-digit, 0-prefix, 91…, 00…, intl; valid/landline/invalid/missing; phone_raw kept for fixes. |
+| FND-06b | Ops job endpoints (/v1/ops/jobs, retry) — split from FND-06 | 1 | done | GET /v1/ops/jobs, POST /v1/ops/jobs/:id/retry; OPS_ADMIN_EMAILS only, 404 for everyone else. |
 | FND-10b | RN theme provider + ui/ components — split from FND-10 | 3 | todo | needs APP-01 project |
 
 ## S3 · 28 Dec 2026 – 10 Jan 2027 · Real guest lists (holiday sprint)

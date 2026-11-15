@@ -4,8 +4,23 @@
     "module": "CommonJS",
     "moduleResolution": "Node",
     "outDir": "dist",
-    "rootDir": ".",
-    "types": ["node", "jest"]
+    "types": [
+      "node",
+      "jest"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@mehfil/domain": [
+        "../../packages/domain/src"
+      ],
+      "@mehfil/i18n": [
+        "../../packages/i18n/src"
+      ]
+    }
   },
-  "include": ["src", "test", "scripts"]
+  "include": [
+    "src",
+    "test",
+    "scripts"
+  ]
 }
