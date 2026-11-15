@@ -63,8 +63,8 @@ describe('message templates (MSG-02)', () => {
     const logger = pino({ level: 'error' }, { write: (line: string) => errors.push(JSON.parse(line).msg) });
     const svc = new TemplateService(prisma, meta, logger);
     await svc.syncCatalogue();
-    expect(await prisma.message_template_variants.count({ where: { provider: 'meta_cloud', approval_status: 'draft' } })).toBe(7);
-    expect(await svc.push()).toBe(7);
+    expect(await prisma.message_template_variants.count({ where: { provider: 'meta_cloud', approval_status: 'draft' } })).toBe(8);
+    expect(await svc.push()).toBe(8);
     expect(meta.submitted).toContain('mehfil_announcement_text_v1/en');
 
     remote.push({ name: 'mehfil_announcement_text_v1', language: 'en', status: 'approved' });

@@ -212,6 +212,44 @@ export class FanoutService {
     return n.count > 0;
   }
 
+  /**
+   * One templated message to one guest on the priority lane (confirmations, replies). Uses the
+   * same recipient/delivery rows as a blast, so status, opt-out and the guest inbox all apply.
+   */
+  async sendToGuest(input: { weddingId: string; guestId: string; templateKey: string; params: Record<string, string>; kind: 'rsvp_confirmation' | 'system'; module: string }) {
+    const { prisma } = this.d;
+    const tpl = await prisma.message_templates.findUnique({
+      where: { key: input.templateKey },
+      include: { message_template_variants: { where: { provider: this.d.provider.name, channel: 'whatsapp', approval_status: 'approved' } } },
+    });
+    const guest = await prisma.guests.findFirst({
+      where: { id: input.guestId, wedding_id: input.weddingId, deleted_at: null },
+      select: { party_id: true, phone_e164: true, phone_status: true, parties: { select: { preferred_language: true } } },
+    });
+    if (!tpl || !guest) return null;
+    const lang = (['hi', 'kn'].includes(guest.parties.preferred_language) ? guest.parties.preferred_language : 'en') as 'en' | 'hi' | 'kn';
+    const variant = tpl.message_template_variants.find((v) => v.language === lang) ?? tpl.message_template_variants.find((v) => v.language === 'en');
+    const phone = guest.phone_status === 'valid' ? guest.phone_e164 : null;
+    const optedOut = phone ? await prisma.messaging_opt_outs.count({ where: { phone_hash: phoneHash(this.d.piiHashKey, phone), channel: 'whatsapp' } }) : 0;
+    const deliverable = !!(variant && phone && !optedOut);
+    const { message, delivery } = await prisma.$transaction(async (tx) => {
+      const message = await tx.messages.create({
+        data: { wedding_id: input.weddingId, kind: input.kind, template_id: tpl.id, params: input.params, channels: ['whatsapp'], sms_fallback: false, priority: 'high', status: deliverable ? 'sending' : 'sent', created_by_module: input.module, recipient_count: 1, sending_started_at: new Date() },
+      });
+      await tx.message_recipients.create({
+        data: { message_id: message.id, guest_id: input.guestId, wedding_id: input.weddingId, party_id: guest.party_id, language: lang, reply_ref: newReplyRef(), suppressed_reason: !phone ? 'no_phone' : optedOut ? 'opted_out' : !variant ? 'no_template' : null },
+      });
+      const delivery = deliverable
+        ? await tx.message_deliveries.create({
+            data: { wedding_id: input.weddingId, message_id: message.id, guest_id: input.guestId, channel: 'whatsapp', provider: this.d.provider.name, variant_id: variant!.id, to_hash: phoneHash(this.d.piiHashKey, phone!), billable_units: 1 },
+          })
+        : null;
+      return { message, delivery };
+    });
+    if (delivery) await this.d.jobs.send(this.jobs.sendOne, { deliveryId: delivery.id });
+    return { messageId: message.id, deliveryId: delivery?.id ?? null };
+  }
+
   /** Re-queues `failed` WhatsApp deliveries (never `unknown`: those may have arrived). */
   async retryFailed(messageId: string) {
     const ids = (

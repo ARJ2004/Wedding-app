@@ -10,6 +10,7 @@ import { createWhatsAppProvider, FanoutService, MessageStats, ReplyRouter, Templ
 import type { AppConfig } from './config/env';
 import type { Logger } from 'pino';
 import { initSentry, Metrics } from './common/observability';
+import { wireReplies } from './wiring';
 
 /** Every job the worker runs. Modules add their `jobs()` here as they land. */
 export function allJobs(deps: { prisma: PrismaClient; jobs: PgBossJobQueue; objectStore: ReturnType<typeof createObjectStore>; linkTokenKey: string; templates: TemplateService; replies: ReplyRouter; fanout: FanoutService; stats: MessageStats }): JobDefinition[] {
@@ -44,11 +45,10 @@ async function main() {
   const stats = new MessageStats(prisma, logger);
   // Catalogue rows follow the code on every deploy (idempotent); approval comes from the provider.
   logger.info(await templates.syncCatalogue(), 'message templates synced');
-  const jobs = allJobs({ prisma, jobs: queue, objectStore: createObjectStore(config), linkTokenKey: config.LINK_TOKEN_KEY, templates,
-    replies: new ReplyRouter(prisma, logger),
-    stats,
-    fanout: new FanoutService({ prisma, jobs: queue, provider: createWhatsAppProvider(config, prisma), logger, piiHashKey: config.PII_HASH_KEY, rate: config.MSG_WA_RATE, stats }),
-  });
+  const replies = new ReplyRouter(prisma, logger);
+  const fanout = new FanoutService({ prisma, jobs: queue, provider: createWhatsAppProvider(config, prisma), logger, piiHashKey: config.PII_HASH_KEY, rate: config.MSG_WA_RATE, stats });
+  wireReplies({ prisma, config, replies, fanout });
+  const jobs = allJobs({ prisma, jobs: queue, objectStore: createObjectStore(config), linkTokenKey: config.LINK_TOKEN_KEY, templates, replies, stats, fanout });
   await queue.register(jobs);
   logger.info({ jobs: jobs.map((j) => j.name) }, 'worker started');
 

@@ -142,6 +142,23 @@ export const CATALOGUE: CatalogueTemplate[] = [
     ],
   },
   {
+    key: 'rsvp_closed',
+    purpose: 'rsvp',
+    category: 'utility',
+    hostSelectable: false,
+    description: 'Tells a family the RSVP has closed',
+    variants: [
+      {
+        channel: 'whatsapp',
+        language: 'en',
+        name: 'mehfil_rsvp_closed_v1',
+        body: 'RSVPs for {{1}} have closed. If your plans changed, please call the family. Details: {{2}}',
+        params: [wedding, link],
+        examples: ['Ananya & Rohan', 'https://mehfil.app/g/abc'],
+      },
+    ],
+  },
+  {
     key: 'otp',
     purpose: 'otp',
     category: 'authentication',
