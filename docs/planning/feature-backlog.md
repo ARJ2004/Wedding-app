@@ -1,5 +1,7 @@
 # Mehfil — Feature Backlog
 
+> **Superseded in part (v2):** the stack is now Express + Prisma + PostgreSQL 16 + pg-boss + S3 + React Native, with Google SSO for hosts (see [architecture baseline](../architecture/00-overview.md)). Every epic below has an architecture design in `docs/architecture/NN-<prefix>.md` with **revised points, split stories and per-story task lists**; the [sprint plan](./sprint-plan.md) uses those. Where this file and a design doc disagree, the design doc wins. Stories here that mention a PWA, web push, Redis or FastAPI are reinterpreted in their design doc.
+
 Source: PRD v0.1 and Market Research (Nov 15, 2026). This file holds every epic and story with its ID, priority, estimate, acceptance criteria and dependencies. The sprint each story lands in is in [sprint-plan.md](./sprint-plan.md).
 
 ## How to read this

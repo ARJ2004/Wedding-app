@@ -119,3 +119,25 @@ scripts/check-schema.sh          # applies every design SQL file to a scratch DB
 | pg-boss + Postgres `LISTEN/NOTIFY` instead of Redis | Fewer moving parts on one EC2 box | Re-evaluate at OPS-01 load test; Redis can be added behind the same interfaces. |
 | EC2 + self-hosted Postgres instead of ECS + RDS | Small team, matches Expense-Tracker | Move to RDS before the Nov 2027 season if the load test or backup drill says so. |
 | Google SSO for hosts and staff only | Older guests often have no Google login; PRD promises no guest accounts | Guests use link + OTP. |
+
+## Accepted changes from the epic designs
+
+The architect runs proposed these changes to the baseline. They are reflected in the epic SQL files and docs; the full schema (`scripts/check-schema.sh`, 28 files, 136 tables) passes on Postgres 16. Items marked *pending* wait on a product decision listed in the sprint plan.
+
+| Area | Change | Source |
+| --- | --- | --- |
+| Push | `push_devices` is owned by APP (`25-app.sql`); `fcm_token` is no longer globally unique (one phone can hold a host session and several guest sessions) | 25-app |
+| Auth | Host refresh tokens and guest sessions share `refresh_tokens` (`01-fnd.sql`); Sign in with Apple stores `apple|<sub>` in `users.google_sub` (*pending*) | 01-fnd, 25-app |
+| Guest link | Link token derived by HMAC from `LINK_TOKEN_KEY` (still 128-bit, only the hash stored) so reminders can rebuild links; lite web uses a cookie session | 05-acc |
+| Secrets | New: `LINK_TOKEN_KEY`, `OTP_PEPPER`, `PII_HASH_KEY`, `CSRF_KEY`; `.env` rendered from SSM Parameter Store on deploy | 05-acc, 14-prv |
+| Jobs | Extra pg-boss queues: `messaging-priority` (OTPs never wait behind a broadcast), `faces`, `video` (P2) | 07-msg, 19-face, 27-p2 |
+| Realtime | `realtime_events` + `rt_publish()` (NOTIFY on commit, replay by cursor) replaces ARR's own realtime | 01-fnd |
+| Media | Uploads carry a `purpose` (only `photos` count as gallery photos); `media_objects.wedding_id` optional for org-owned media (planner logo); `import` kind | 12-cam, 18-pln, 04-gst |
+| Postgres | `btree_gist` extension for room/vehicle overlap constraints; `parties.checkin_code` for the party QR; `guests.preferred_language` | 15-pck, 16-rom, 09-arr, 20-l10n |
+| Web surfaces served by the API | `/g/:token` guest lite web (+ wish form), `/d/:token` driver page, `/account` billing pages (Google web sign-in), `/admin` for `platform_staff`, quiz projector page; `/c/*` camera deep links | 11-gh, 15-pck, 23-bil, 14-prv, 21-qz, 12-cam |
+| Packages | `packages/i18n` (shared catalogues, ICU) | 20-l10n |
+| Email / site / analytics | Amazon SES; static `apps/site` on S3 + CloudFront; analytics events table in Postgres | 23-bil, 24-gtm |
+| Billing | Only BIL writes `weddings.plan`; plan limits return HTTP 402 | 23-bil |
+| Privacy | Deleted weddings become a tombstone row with no personal data; ordered purge via `PurgeParticipant` in every module | 14-prv |
+| Ops | pgBackRest WAL archiving (PITR) alongside nightly `pg_dump`; season hot standby (*pending*); Caddy for white-label custom domains (P2, *pending*) | 26-ops, 27-p2 |
+| Clients | No host web console: hosts and planners use the app on phone or tablet | 25-app, 18-pln |

@@ -5,7 +5,8 @@
 -- Depends on: 000-core.sql only.
 
 -- One vault per wedding. ON DELETE RESTRICT is a deliberate interlock: a wedding cannot be
--- hard-deleted until the vault has been shredded and this row removed by idv.shred_wedding.
+-- hard-deleted until the vault has been shredded and this row removed by the IDV PurgeParticipant
+-- (wedding purge). After a normal retention shred the row stays with status 'shredded' (tombstone).
 CREATE TABLE idv_vaults (
   wedding_id         uuid PRIMARY KEY REFERENCES weddings(id) ON DELETE RESTRICT,
   status             text NOT NULL DEFAULT 'open'
@@ -17,14 +18,16 @@ CREATE TABLE idv_vaults (
   uploads_close_at   timestamptz,                         -- null = wedding end; guests cannot upload after
   extra_viewer_roles text[] NOT NULL DEFAULT '{}'         -- owner + co_host always; may add 'planner_member' only
                      CHECK (extra_viewer_roles <@ ARRAY['planner_member']::text[]),
-  shred_due_at       timestamptz,                         -- recomputed when wedding dates or delete_after_days change
+  -- When to shred comes from PRV's wedding_retention_state(data_class='id_documents'), recomputed
+  -- by PRV from weddings.ends_on + delete_after_days; not duplicated here.
+  reminder_sent_at   timestamptz,                         -- owner told 24 h before shredding
   shred_started_at   timestamptz,
   shredded_at        timestamptz,
   shred_report       jsonb,                               -- {objectsDeleted, objectsRemaining:0, keyState, keyDeletionDate}
   created_at         timestamptz NOT NULL DEFAULT now(),
   updated_at         timestamptz NOT NULL DEFAULT now()
 );
-CREATE INDEX idv_vaults_shred_due_idx ON idv_vaults (shred_due_at) WHERE status IN ('open','closed');
+CREATE INDEX idv_vaults_live_idx ON idv_vaults (status) WHERE status IN ('open','closed','shredding');
 
 -- Named people (beyond the role defaults) the owner lets view IDs, e.g. a specific planner member.
 -- Desk staff can never be granted (enforced in the service and by the permission matrix).
