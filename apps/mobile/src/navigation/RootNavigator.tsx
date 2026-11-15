@@ -8,6 +8,7 @@ import { EventsScreen } from '../features/events';
 import { ConsentScreen, GuestEntryFlow, GuestHomeScreen, GuestMeScreen, RsvpScreen } from '../features/guest';
 import { GuestsScreen, ImportScreen } from '../features/guests';
 import { ComposerScreen, MessageDetailScreen, MessagesScreen } from '../features/messages';
+import { HeadcountScreen } from '../features/headcount';
 import { can } from '@mehfil/domain';
 import { MoreScreen } from '../features/settings';
 import { CreateWeddingScreen, HostHomeScreen, useApplyWeddingPalette, useWedding, WeddingPickerScreen, WeddingSettingsScreen } from '../features/weddings';
@@ -21,6 +22,7 @@ type WelcomeStack = { Welcome: undefined };
 type GuestTabsList = { GuestHome: undefined; Rsvp: undefined; Me: undefined };
 type PickerStack = { Picker: undefined; CreateWedding: undefined };
 type HostTabs = { Home: undefined; Events: undefined; Guests: undefined; Messages: undefined; More: undefined };
+type HomeStack = { HomeMain: undefined; Headcount: undefined };
 type MessagesStack = { MessageList: undefined; Composer: { messageId: string | null }; MessageDetail: { messageId: string } };
 type GuestsStack = { GuestList: undefined; Import: undefined };
 type MoreStack = { MoreHome: undefined; WeddingSettings: undefined };
@@ -31,6 +33,16 @@ const Tabs = createBottomTabNavigator<HostTabs>();
 const Guests = createNativeStackNavigator<GuestsStack>();
 const More = createNativeStackNavigator<MoreStack>();
 const Msgs = createNativeStackNavigator<MessagesStack>();
+const HomeS = createNativeStackNavigator<HomeStack>();
+
+function HomeNavigator() {
+  return (
+    <HomeS.Navigator screenOptions={{ headerShown: false }}>
+      <HomeS.Screen name="HomeMain">{({ navigation }) => <HostHomeScreen onHeadcount={() => navigation.navigate('Headcount')} />}</HomeS.Screen>
+      <HomeS.Screen name="Headcount">{({ navigation }) => <HeadcountScreen onBack={() => navigation.goBack()} />}</HomeS.Screen>
+    </HomeS.Navigator>
+  );
+}
 
 function MessagesNavigator() {
   return (
@@ -156,7 +168,7 @@ function HostNavigator() {
         ),
       })}
     >
-      <Tabs.Screen name="Home" component={HostHomeScreen} options={{ title: t('tabs.home'), tabBarButtonTestID: 'tab-home' }} />
+      <Tabs.Screen name="Home" component={HomeNavigator} options={{ title: t('tabs.home'), tabBarButtonTestID: 'tab-home' }} />
       <Tabs.Screen name="Events" component={EventsScreen} options={{ title: t('tabs.events'), tabBarButtonTestID: 'tab-events' }} />
       <Tabs.Screen name="Guests" component={GuestsNavigator} options={{ title: t('tabs.guests'), tabBarButtonTestID: 'tab-guests' }} />
       {role && can(role, 'message.read') ? (

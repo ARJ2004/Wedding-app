@@ -5344,6 +5344,89 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/weddings/{weddingId}/rsvp/headcount': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Who is coming, per event (live via the headcount stream) */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          weddingId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Headcount'];
+          };
+        };
+        /** @description Error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/v1/guest/home': {
     parameters: {
       query?: never;
@@ -8136,6 +8219,42 @@ export interface components {
           status: 'attending' | 'declined' | 'maybe' | null;
         }[];
       }[];
+    };
+    Headcount: {
+      rtCursor: string;
+      generatedAt: string;
+      detail: boolean;
+      events: components['schemas']['EventHeadcount'][];
+    };
+    EventHeadcount: {
+      eventId: string;
+      name: string;
+      startsAt: string;
+      rsvpEnabled: boolean;
+      invited: number;
+      counts: {
+        attending: number;
+        declined: number;
+        maybe: number;
+        pending: number;
+      };
+      bySide?: {
+        [key: string]: {
+          attending: number;
+          declined: number;
+          maybe: number;
+          pending: number;
+        };
+      };
+      diet?: {
+        [key: string]: number;
+      };
+      allergies?: {
+        [key: string]: number;
+      };
+      ageBand?: {
+        [key: string]: number;
+      };
     };
     GuestHome: {
       wedding: {

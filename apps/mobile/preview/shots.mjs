@@ -296,6 +296,24 @@ if (want('msg-')) {
   }
 }
 
+if (want('hc-')) {
+  // RSV-03: live headcount from Host home.
+  for (const scheme of ['light', 'dark']) {
+    const { ctx, page } = await session({ scheme });
+    await page.getByTestId('hc-open').scrollIntoViewIfNeeded();
+    if (scheme === 'light') await shot(page, 'hc-01-home-card');
+    await page.getByTestId('hc-open').click();
+    await page.getByTestId('hc-Sangeet').waitFor();
+    await page.waitForTimeout(800);
+    await shot(page, `hc-02-headcount-${scheme}`);
+    await page.getByTestId('hc-Sangeet').click();
+    await page.waitForTimeout(500);
+    await page.getByTestId('hc-Sangeet').scrollIntoViewIfNeeded();
+    await shot(page, `hc-03-sangeet-detail-${scheme}`);
+    await ctx.close();
+  }
+}
+
 if (want('live-')) {
   // FND-14: host home follows the headcount channel over SSE; the badge shows once the stream is open.
   for (const scheme of ['light', 'dark']) {

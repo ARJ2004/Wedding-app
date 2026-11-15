@@ -1912,6 +1912,127 @@
           "events"
         ]
       },
+      "Headcount": {
+        "type": "object",
+        "properties": {
+          "rtCursor": {
+            "type": "string"
+          },
+          "generatedAt": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "boolean"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventHeadcount"
+            }
+          }
+        },
+        "required": [
+          "rtCursor",
+          "generatedAt",
+          "detail",
+          "events"
+        ]
+      },
+      "EventHeadcount": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string"
+          },
+          "rsvpEnabled": {
+            "type": "boolean"
+          },
+          "invited": {
+            "type": "integer"
+          },
+          "counts": {
+            "type": "object",
+            "properties": {
+              "attending": {
+                "type": "integer"
+              },
+              "declined": {
+                "type": "integer"
+              },
+              "maybe": {
+                "type": "integer"
+              },
+              "pending": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "attending",
+              "declined",
+              "maybe",
+              "pending"
+            ]
+          },
+          "bySide": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "attending": {
+                  "type": "integer"
+                },
+                "declined": {
+                  "type": "integer"
+                },
+                "maybe": {
+                  "type": "integer"
+                },
+                "pending": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "attending",
+                "declined",
+                "maybe",
+                "pending"
+              ]
+            }
+          },
+          "diet": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "allergies": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "ageBand": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          }
+        },
+        "required": [
+          "eventId",
+          "name",
+          "startsAt",
+          "rsvpEnabled",
+          "invited",
+          "counts"
+        ]
+      },
       "GuestHome": {
         "type": "object",
         "properties": {
@@ -9375,6 +9496,92 @@
             }
           },
           "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/weddings/{weddingId}/rsvp/headcount": {
+      "get": {
+        "summary": "Who is coming, per event (live via the headcount stream)",
+        "tags": [
+          "rsvp"
+        ],
+        "security": [
+          {
+            "hostAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "weddingId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Headcount"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Error",
             "content": {
               "application/json": {

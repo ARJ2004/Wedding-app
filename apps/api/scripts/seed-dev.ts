@@ -102,6 +102,7 @@ export async function seed(prisma: PrismaClient, log: (line: string) => void = (
     { kind: 'pheras', name: 'Pheras', at: '2027-02-13T20:30', venue: palace, dress: 'Traditional', familyOnly: false },
     { kind: 'reception', name: 'Reception', at: '2027-02-14T19:00', venue: palace, dress: 'Formal', familyOnly: false },
   ] as const;
+  const created: { id: string; familyOnly: boolean }[] = [];
   for (const [i, e] of events.entries()) {
     const ev = await prisma.events.create({
       data: {
@@ -116,6 +117,7 @@ export async function seed(prisma: PrismaClient, log: (line: string) => void = (
       },
     });
     if (e.familyOnly) await prisma.event_groups.create({ data: { event_id: ev.id, group_id: groups.family.id } });
+    created.push({ id: ev.id, familyOnly: e.familyOnly });
   }
 
   const links: string[] = [];
@@ -155,6 +157,16 @@ export async function seed(prisma: PrismaClient, log: (line: string) => void = (
     const kind = p < 12 ? groups.family : groups.friends;
     await prisma.party_groups.createMany({ data: [{ party_id: party.id, group_id: side.id }, { party_id: party.id, group_id: kind.id }] });
     if (p < 3) await prisma.party_groups.create({ data: { party_id: party.id, group_id: groups.vip.id } });
+    // Demo answers (RSV-03): about 60% of families have replied for the open events.
+    if (p % 5 < 3) {
+      const members = await prisma.guests.findMany({ where: { party_id: party.id }, select: { id: true } });
+      const status = p % 7 === 0 ? 'declined' : p % 4 === 0 ? 'maybe' : 'attending';
+      for (const ev of created.filter((x) => !x.familyOnly)) {
+        await prisma.rsvps.createMany({ data: members.map((m) => ({ wedding_id: wedding.id, event_id: ev.id, party_id: party.id, guest_id: m.id, status, source: 'app', responded_by_guest_id: members[0]!.id })) });
+      }
+      const diets = ['veg', 'jain', 'non_veg', 'veg', 'eggetarian'] as const;
+      await prisma.guest_dietary.createMany({ data: members.map((m, i) => ({ guest_id: m.id, wedding_id: wedding.id, diet: diets[(p + i) % diets.length]!, allergies: (p + i) % 6 === 0 ? ['nuts'] : [] })) });
+    }
     if (p < 5) links.push(`  ${party.label.padEnd(18)} /g/${token}`);
   }
 

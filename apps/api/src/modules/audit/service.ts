@@ -36,7 +36,14 @@ export async function writeAudit(db: Db, e: AuditEntry): Promise<void> {
       request_id: e.requestId ?? null,
     },
   });
+  // Changes that move headcount denominators (who is invited) make open headcount screens refetch
+  // (RSV-03, 06-rsv §5). Hooked here because every such change is already audited in-transaction.
+  if (e.weddingId && HEADCOUNT_STALE.has(e.action)) {
+    await db.$executeRaw`SELECT rt_publish(${e.weddingId}::uuid, 'headcount', 'headcount.stale', '{}'::jsonb)`;
+  }
 }
+
+const HEADCOUNT_STALE = new Set(['party.create', 'party.update', 'party.delete', 'guest.create', 'guest.update', 'guest.delete', 'event.visibility.update', 'guest.import']);
 
 /** Only the fields that changed, for compact before/after pairs. */
 export function diff<T extends Record<string, unknown>>(before: T, after: Partial<T>) {

@@ -16,7 +16,7 @@ import type { RouteContext } from './common/define-route';
 import { AccessService, accessRoutes } from './modules/access';
 import { authRoutes } from './modules/auth';
 import { guestHomeRoutes } from './modules/guest-home';
-import { RsvpService, rsvpRoutes } from './modules/rsvp';
+import { headcountRoutes, RsvpService, rsvpRoutes } from './modules/rsvp';
 import { guestRoutes } from './modules/guests';
 import { importRoutes, ImportService } from './modules/guests/import';
 import { MediaService, mediaRoutes } from './modules/media';
@@ -103,6 +103,7 @@ export function createApp(deps: Deps, opts: { verifiers?: IdTokenVerifier[] } = 
   realtimeRoutes(ctx, { prisma: deps.prisma, tokens, hub: realtime });
   const rsvp = new RsvpService(deps.prisma);
   rsvpRoutes(ctx, rsvp);
+  headcountRoutes(ctx, deps.prisma);
   guestHomeRoutes(ctx, { prisma: deps.prisma, objectStore: deps.objectStore, rsvp });
   const media = new MediaService(deps);
   mediaRoutes(ctx, media);

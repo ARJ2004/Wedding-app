@@ -17,7 +17,11 @@ export const REALTIME_CHANNELS = {
   headcount: {
     actions: ['rsvp.read', 'rsvp.headcount'] as Action[],
     guest: false,
-    kinds: { 'rsvp.changed': z.object({ partyId: z.string().uuid(), eventIds: z.array(z.string().uuid()) }) },
+    kinds: {
+      'rsvp.changed': z.object({ partyId: z.string().uuid(), eventIds: z.array(z.string().uuid()) }),
+      /** Who is invited changed: refetch the headcount. */
+      'headcount.stale': z.object({}),
+    },
   },
   /** MSG-06: send progress for the host message-detail screen (counts only, no names or phones). */
   messages: {

@@ -1,14 +1,13 @@
 import React from 'react';
 import { Image, View } from 'react-native';
 import { formatInZone, useT } from '../../i18n/useT';
-import { useQueryClient } from '@tanstack/react-query';
-import { useEventStream } from '../../lib/realtime';
 import { useSession } from '../../lib/session';
 import { useStyles } from '../../theme/ThemeProvider';
 import { Card, EmptyState, Loading, Screen, SectionLabel, Tag, Text } from '../../ui';
 import { EventCard, useEvents, useVenues } from '../events';
 import { useGroups, useParties } from '../guests';
 import { useWedding } from './hooks';
+import { HeadcountSummaryCard, useLiveHeadcount } from '../headcount';
 
 function Stat({ label, value, testID }: { label: string; value: number | string; testID?: string }) {
   const s = useStyles((t) => ({ stat: { flex: 1, alignItems: 'center', gap: t.spacing.xxs } }));
@@ -24,7 +23,7 @@ function Stat({ label, value, testID }: { label: string; value: number | string;
   );
 }
 
-export function HostHomeScreen() {
+export function HostHomeScreen({ onHeadcount }: { onHeadcount?: () => void } = {}) {
   const t = useT();
   const weddingId = useSession((s) => s.weddingId)!;
   const wedding = useWedding(weddingId);
@@ -32,16 +31,9 @@ export function HostHomeScreen() {
   const venues = useVenues(weddingId);
   const parties = useParties(weddingId, '', null);
   useGroups(weddingId);
-  const qc = useQueryClient();
-  // Live headcount (FND-14): a guest's RSVP refreshes this wedding's cached lists.
-  const live = useEventStream(weddingId, ['headcount'], {
-    onEvent: () => {
-      qc.invalidateQueries({ predicate: (q) => q.queryKey.includes(weddingId) }).catch(() => undefined);
-    },
-    onReset: () => {
-      qc.invalidateQueries().catch(() => undefined);
-    },
-  });
+  // Live headcount (RSV-03 over FND-14): one stream for the whole Home screen.
+  const hc = useLiveHeadcount(weddingId);
+  const live = hc.live;
   const s = useStyles((th) => ({
     hero: { backgroundColor: th.colors.primary, borderRadius: th.radii.lg, padding: th.spacing.xl, gap: th.spacing.xs, overflow: 'hidden' },
     cover: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.35 },
@@ -82,6 +74,7 @@ export function HostHomeScreen() {
           {live === 'live' ? <Tag label={t('home.live')} tone="success" testID="tag-live" /> : null}
         </View>
       </Card>
+      {onHeadcount ? <HeadcountSummaryCard data={hc.data} onOpen={onHeadcount} /> : null}
       <SectionLabel>{t('home.next')}</SectionLabel>
       {events.data && upcoming.length === 0 ? <EmptyState title={t('home.noEvents')} /> : null}
       {upcoming.map((e) => (
