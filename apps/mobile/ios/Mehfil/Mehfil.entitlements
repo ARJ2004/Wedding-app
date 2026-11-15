@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- APP-02: universal links for invites (https://mehfil.app/g/<token>). Needs the Apple team id in
+	     https://mehfil.app/.well-known/apple-app-site-association and this file added to the target
+	     (CODE_SIGN_ENTITLEMENTS) once the Apple Developer account exists. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:mehfil.app</string>
+	</array>
+</dict>
+</plist>

@@ -1,17 +1,19 @@
 import * as Keychain from 'react-native-keychain';
 
-const SERVICE = 'in.mehfil.app.session';
+export type SecureKey = 'host' | 'guest' | 'install';
 
-/** Refresh token + device id in the OS keychain (never MMKV/AsyncStorage). */
+const service = (key: SecureKey) => `in.mehfil.app.${key}`;
+
+/** Session secrets in the OS keychain, one entry per identity (never MMKV/AsyncStorage). */
 export const secureStore = {
-  async get(): Promise<string | null> {
-    const res = await Keychain.getGenericPassword({ service: SERVICE });
+  async get(key: SecureKey = 'host'): Promise<string | null> {
+    const res = await Keychain.getGenericPassword({ service: service(key) });
     return res ? res.password : null;
   },
-  async set(value: string): Promise<void> {
-    await Keychain.setGenericPassword('session', value, { service: SERVICE });
+  async set(value: string, key: SecureKey = 'host'): Promise<void> {
+    await Keychain.setGenericPassword(key, value, { service: service(key) });
   },
-  async clear(): Promise<void> {
-    await Keychain.resetGenericPassword({ service: SERVICE });
+  async clear(key: SecureKey = 'host'): Promise<void> {
+    await Keychain.resetGenericPassword({ service: service(key) });
   },
 };

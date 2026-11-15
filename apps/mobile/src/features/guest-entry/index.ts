@@ -1,1 +1,0 @@
-export { GuestEntryScreen } from './GuestEntryScreen';

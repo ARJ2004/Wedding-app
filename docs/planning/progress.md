@@ -65,18 +65,19 @@ Tracked by the Ralph loop (`.claude/ralph/PROMPT.md`). Status: `todo`, `doing`, 
 
 | Story | Title | Pts | Status | Note |
 | --- | --- | --- | --- | --- |
-| APP-01b | App shell, sessions and host sign-in | 3 | todo | |
-| APP-02 | Deep and universal links | 3 | todo | |
-| APP-04 | Offline cache and mutation outbox | 3 | todo | |
+| APP-01b | App shell, sessions and host sign-in | 3 | done | Multi-identity sessions: host + guest each in their own keychain entry, shared install id, guest refresh single-flight, API client picks the identity per path; Guest/Host mode switch. |
+| APP-02 | Deep and universal links | 3 | done | Invite links https://mehfil.app/g/<token> open Guest mode (Linking on launch + while running; pasted links too). Android App Link intent filter (autoVerify); iOS associated domain entitlements file. Needs: assetlinks.json / apple-app-site-association on mehfil.app (Play signing SHA-256, Apple team id). |
+| APP-04b | MMKV query persister + offline mutation outbox (split from APP-04) | 2 | todo | |
+| APP-04 | Offline cache and mutation outbox | 3 | done | Partial: TanStack queries marked persist with 14-day gcTime; MMKV persister + offline mutation outbox still to do (APP-04b). |
 | FND-14 | (new, absorbs ARR-05) Realtime infra | 3 | todo | |
 | PRV-01 | Notice and consent records | 3 | done | privacy_notices + texts (draft guest-2027.1 seeded by migration, sha256 of what was shown), consents with notice version/source/locale, GET /v1/guest/privacy-notice. Needs counsel review of the notice text (VAL-13). |
 | ACC-01 | Personal link | 3 | done | Derived 128-bit invite links (HMAC of party id + version, only sha256 stored), set on create/import/seed; host GET link + rotate (signs all devices out). API done; app link sharing UI with MSG. |
-| ACC-02a | New-device OTP (app) | 5 | done | API: /v1/guest/auth/start (first names + masked phones only), /otp (dev code 000000, nothing sent; 503 until MSG wires WhatsApp/SMS), /verify (HMAC+pepper, 5 attempts, install-bound, party lock after 10 fails → 423), guest_devices with trust ≤ 90 d / wedding+31 d, /refresh (rotation, reuse detection), /logout, /session. Deviation: guest refresh/logout are /v1/guest/auth/* (typed responses) instead of the shared FND routes. App screens next iteration. Needs credentials: Meta WhatsApp OTP template, DLT SMS. |
+| ACC-02a | New-device OTP (app) | 5 | done | API: /v1/guest/auth/start (first names + masked phones only), /otp (dev code 000000, nothing sent; 503 until MSG wires WhatsApp/SMS), /verify (HMAC+pepper, 5 attempts, install-bound, party lock after 10 fails → 423), guest_devices with trust ≤ 90 d / wedding+31 d, /refresh (rotation, reuse detection), /logout, /session. Deviation: guest refresh/logout are /v1/guest/auth/* (typed responses) instead of the shared FND routes. App: invite → Who are you? → code → privacy notice (consent gate). Needs credentials: Meta WhatsApp OTP template, DLT SMS. |
 | ACC-04 | Consent capture | 3 | done | Consent gate: guest routes require core consent (403 ACC_CONSENT_REQUIRED) except sign-in/session/consent; PUT/DELETE /v1/guest/consents/:purpose (withdrawing core signs the device out). Deviation: DB check per request instead of a token claim (simpler; revisit at OPS-01). |
 | SET-04 | Event visibility by group | 3 | done | PUT /events/:id/groups (all | groups, validated, audited) + GET audience; listInvitedEvents() over the party_invited_events view is the single source for guest home, RSVP and later MSG targeting. |
-| GH-01 | Guest-mode shell (was "PWA shell") | 2 | todo | |
-| GH-02 | Personal schedule + home aggregate | 5 | done | GET /v1/guest/home aggregate: wedding (cover URL, palette), me, party, invited events with venue + RSVP counts, contacts, pending RSVPs; ETag/304. Consent required. App screens next iteration. |
-| RSV-01a | Per-event RSVP (API + app) | 5 | done | GET/PUT /v1/guest/rsvp: batch answers per member × invited event, diets/allergies, refuses other parties (404), hidden events (404), disabled/closed (409); records responder (shared phone) + source; audit. Fixed: OTP cooldown was per party (blocked two phones of one family) → per phone. App screens next iteration. |
+| GH-01 | Guest-mode shell (was "PWA shell") | 2 | done | Guest navigator Home · RSVP · Me (final guest tab set is an open product decision); wedding palette applied; icon+label, 48dp+. |
+| GH-02 | Personal schedule + home aggregate | 5 | done | GET /v1/guest/home aggregate: wedding (cover URL, palette), me, party, invited events with venue + RSVP counts, contacts, pending RSVPs; ETag/304. Consent required. App: Guest Home (dates, cover, RSVP banner, schedule with Open in Maps, contacts with Call/WhatsApp). |
+| RSV-01a | Per-event RSVP (API + app) | 5 | done | GET/PUT /v1/guest/rsvp: batch answers per member × invited event, diets/allergies, refuses other parties (404), hidden events (404), disabled/closed (409); records responder (shared phone) + source; audit. Fixed: OTP cooldown was per party (blocked two phones of one family) → per phone. App: RSVP for the whole family, one-tap "Everyone\'s coming to everything", diets, unsaved-changes hint. |
 
 ## S5 · 25 Jan – 7 Feb 2027 · Send it once, reach everyone
 

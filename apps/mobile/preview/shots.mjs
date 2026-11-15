@@ -165,6 +165,52 @@ if (want('settings-')) {
   await ctx.close();
 }
 
+if (want('guest-')) {
+  // A guest's journey from a WhatsApp link: pick yourself, code, notice, schedule, RSVP.
+  const api = 'http://localhost:4000';
+  const host = await (await fetch(`${api}/v1/auth/google`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idToken: 'dev:owner@mehfil.local', deviceId: 'shots-device-0000000001' }) })).json();
+  const auth = { Authorization: `Bearer ${host.accessToken}` };
+  const wid = host.user.weddings[0].id;
+  const parties = (await (await fetch(`${api}/v1/weddings/${wid}/parties?limit=200`, { headers: auth })).json()).items;
+  const fam = parties.filter((p) => p.members.length >= 3 && p.members[0].phoneStatus === 'valid');
+  const party = fam[Math.floor(Date.now() / 60000) % fam.length]; // a different family each run (OTP hourly cap)
+  const { url } = await (await fetch(`${api}/v1/weddings/${wid}/parties/${party.id}/link`, { headers: auth })).json();
+  const token = url.split('/').pop();
+  for (const scheme of ['light']) {
+    const ctx = await browser.newContext({ ...device, colorScheme: scheme });
+    const page = await ctx.newPage();
+    page.on('pageerror', (e) => console.error('pageerror:', e.message));
+    await page.goto(`${BASE}/g/${token}`, { waitUntil: 'networkidle' });
+    await page.getByTestId('screen-guest-pick').waitFor();
+    await shot(page, 'guest-01-who-are-you');
+    await page.getByTestId(`pick-${party.members[0].fullName.split(' ')[0]}`).click();
+    await page.getByTestId('screen-guest-otp').waitFor();
+    await page.getByTestId('otp-code').fill('000000');
+    await shot(page, 'guest-02-code');
+    await page.getByTestId('otp-verify').click();
+    await page.getByTestId('screen-consent').waitFor();
+    await page.waitForTimeout(600);
+    await shot(page, 'guest-03-privacy');
+    await page.getByTestId('consent-accept').click();
+    await page.getByTestId('screen-guest-home').waitFor();
+    await page.waitForTimeout(1200);
+    await shot(page, 'guest-04-home');
+    await page.getByTestId('rsvp-cta').click();
+    await page.getByTestId('screen-rsvp').waitFor();
+    await page.waitForTimeout(600);
+    await shot(page, 'guest-05a-rsvp-start');
+    await page.getByTestId('rsvp-all-yes').click();
+    await page.locator('[data-testid$="-maybe"]').nth(1).click();
+    await shot(page, 'guest-05-rsvp');
+    await page.getByTestId('rsvp-save').click();
+    await page.getByText('Saved. Thank you!').waitFor();
+    await page.getByTestId('gtab-home').click();
+    await page.waitForTimeout(1200);
+    await shot(page, 'guest-06-home-after-rsvp');
+    await ctx.close();
+  }
+}
+
 // Import flow last: it adds guests to the demo wedding.
 if (want('import-')) {
   const sample = path.resolve(here, '../../../docs/samples/guest-list-sample.xlsx');

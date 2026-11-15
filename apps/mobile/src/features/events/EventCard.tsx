@@ -1,4 +1,3 @@
-import type { Event } from '@mehfil/api-client';
 import React from 'react';
 import { View } from 'react-native';
 import { formatInZone, useT } from '../../i18n/useT';
@@ -6,7 +5,14 @@ import { useStyles } from '../../theme/ThemeProvider';
 import { Card, Text } from '../../ui';
 
 /** Shared by host Events/Home now and Guest Home later (moves to components/ with GH-02). */
-export function EventCard({ event, timezone, venueName }: { event: Event; timezone: string; venueName?: string }) {
+/** Fields both the host Event and the guest-home event have. */
+export interface EventCardData {
+  name: string;
+  startsAt: string;
+  dressCode: string | null;
+}
+
+export function EventCard({ event, timezone, venueName, children }: { event: EventCardData; timezone: string; venueName?: string; children?: React.ReactNode }) {
   const t = useT();
   const s = useStyles((th) => ({
     row: { flexDirection: 'row', gap: th.spacing.md, alignItems: 'flex-start' },
@@ -41,6 +47,7 @@ export function EventCard({ event, timezone, venueName }: { event: Event; timezo
           {event.dressCode ? <Text variant="caption">{t('events.dress', { dressCode: event.dressCode })}</Text> : null}
         </View>
       </View>
+      {children}
     </Card>
   );
 }

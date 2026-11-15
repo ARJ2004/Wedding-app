@@ -1,7 +1,7 @@
 import type { AuthResponse, Me } from '@mehfil/api-client';
 import { create } from 'zustand';
 import { config } from './config';
-import { newDeviceId } from './device-id';
+import { installId } from './install-id';
 import { googleSignOut } from './google';
 import { secureStore } from './secure-store';
 
@@ -93,7 +93,7 @@ export const useSession = create<SessionState>((set, get) => {
     },
 
     async signIn(idToken) {
-      const deviceId = persisted?.deviceId ?? newDeviceId();
+      const deviceId = persisted?.deviceId ?? (await installId());
       set({ error: null });
       const res = await post<AuthResponse>('/v1/auth/google', { idToken, deviceId });
       if (!res.ok) {

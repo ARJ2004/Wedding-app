@@ -1,23 +1,25 @@
+export type SecureKey = 'host' | 'guest' | 'install';
+
 /** Web preview only: sessionStorage (the real app uses the OS keychain). */
-const KEY = 'mehfil.session';
+const k = (key: SecureKey) => `mehfil.secure.${key}`;
 export const secureStore = {
-  async get(): Promise<string | null> {
+  async get(key: SecureKey = 'host'): Promise<string | null> {
     try {
-      return window!.sessionStorage.getItem(KEY);
+      return window!.sessionStorage.getItem(k(key));
     } catch {
       return null;
     }
   },
-  async set(value: string): Promise<void> {
+  async set(value: string, key: SecureKey = 'host'): Promise<void> {
     try {
-      window!.sessionStorage.setItem(KEY, value);
+      window!.sessionStorage.setItem(k(key), value);
     } catch {
       /* private mode: session lives in memory only */
     }
   },
-  async clear(): Promise<void> {
+  async clear(key: SecureKey = 'host'): Promise<void> {
     try {
-      window!.sessionStorage.removeItem(KEY);
+      window!.sessionStorage.removeItem(k(key));
     } catch {
       /* ignore */
     }

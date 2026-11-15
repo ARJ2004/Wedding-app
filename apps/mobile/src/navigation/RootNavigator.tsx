@@ -2,18 +2,21 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { DarkTheme, DefaultTheme, NavigationContainer, type Theme as NavTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React, { useEffect, useMemo } from 'react';
+import { Linking } from 'react-native';
 import { WelcomeScreen } from '../features/auth-host';
 import { EventsScreen } from '../features/events';
-import { GuestEntryScreen } from '../features/guest-entry';
+import { ConsentScreen, GuestEntryFlow, GuestHomeScreen, GuestMeScreen, RsvpScreen } from '../features/guest';
 import { GuestsScreen, ImportScreen } from '../features/guests';
 import { MoreScreen } from '../features/settings';
 import { CreateWeddingScreen, HostHomeScreen, useApplyWeddingPalette, WeddingPickerScreen, WeddingSettingsScreen } from '../features/weddings';
 import { useT } from '../i18n/useT';
+import { parseInviteToken, useGuestSession, useMode } from '../lib/guest-session';
 import { useSession } from '../lib/session';
 import { useTheme } from '../theme/ThemeProvider';
 import { Loading, Screen, Text } from '../ui';
 
-type WelcomeStack = { Welcome: undefined; GuestEntry: undefined };
+type WelcomeStack = { Welcome: undefined };
+type GuestTabsList = { GuestHome: undefined; Rsvp: undefined; Me: undefined };
 type PickerStack = { Picker: undefined; CreateWedding: undefined };
 type HostTabs = { Home: undefined; Events: undefined; Guests: undefined; More: undefined };
 type GuestsStack = { GuestList: undefined; Import: undefined };
@@ -45,13 +48,65 @@ function GuestsNavigator() {
 
 const TAB_GLYPH: Record<keyof HostTabs, string> = { Home: '⌂', Events: '◷', Guests: '☺', More: '≡' };
 
+const GuestTabs = createBottomTabNavigator<GuestTabsList>();
+const GUEST_GLYPH: Record<keyof GuestTabsList, string> = { GuestHome: '⌂', Rsvp: '✓', Me: '☺' };
+
 function WelcomeNavigator() {
+  const setMode = useMode((st) => st.setMode);
   return (
     <Welcome.Navigator screenOptions={{ headerShown: false }}>
-      <Welcome.Screen name="Welcome">{({ navigation }) => <WelcomeScreen onGuest={() => navigation.navigate('GuestEntry')} />}</Welcome.Screen>
-      <Welcome.Screen name="GuestEntry">{({ navigation }) => <GuestEntryScreen onBack={() => navigation.goBack()} />}</Welcome.Screen>
+      <Welcome.Screen name="Welcome">{() => <WelcomeScreen onGuest={() => setMode('guest')} />}</Welcome.Screen>
     </Welcome.Navigator>
   );
+}
+
+/**
+ * Guest mode (25-app §6). Tabs are Home · RSVP · Me until Travel (S6), Camera and Photos (S7)
+ * exist; the final guest tab set is an open product decision.
+ */
+function GuestNavigator() {
+  const t = useT();
+  const theme = useTheme();
+  return (
+    <GuestTabs.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.textMuted,
+        tabBarStyle: { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, minHeight: theme.minTouchTarget + 16 },
+        tabBarLabelStyle: { fontSize: theme.type.body.fontSize },
+        tabBarIcon: ({ color }) => (
+          <Text variant="title" style={{ color }}>
+            {GUEST_GLYPH[route.name]}
+          </Text>
+        ),
+      })}
+    >
+      <GuestTabs.Screen name="GuestHome" options={{ title: t('guestTabs.home'), tabBarButtonTestID: 'gtab-home' }}>
+        {({ navigation }) => <GuestHomeScreen onRsvp={() => navigation.navigate('Rsvp')} />}
+      </GuestTabs.Screen>
+      <GuestTabs.Screen name="Rsvp" component={RsvpScreen} options={{ title: t('guestTabs.rsvp'), tabBarButtonTestID: 'gtab-rsvp' }} />
+      <GuestTabs.Screen name="Me" component={GuestMeScreen} options={{ title: t('guestTabs.me'), tabBarButtonTestID: 'gtab-me' }} />
+    </GuestTabs.Navigator>
+  );
+}
+
+/** Invite links (https://mehfil.app/g/<token>) open Guest mode: on launch and while running. */
+function useInviteLinks() {
+  const setPendingToken = useGuestSession((st) => st.setPendingToken);
+  const setMode = useMode((st) => st.setMode);
+  useEffect(() => {
+    const handle = (url: string | null | undefined) => {
+      const token = url && /\/g\//.test(url) ? parseInviteToken(url) : null;
+      if (token) {
+        setPendingToken(token);
+        setMode('guest');
+      }
+    };
+    void Linking.getInitialURL().then(handle);
+    const sub = Linking.addEventListener('url', (e) => handle(e.url));
+    return () => sub.remove();
+  }, [setPendingToken, setMode]);
 }
 
 function PickerNavigator() {
@@ -94,9 +149,18 @@ function HostNavigator() {
 export function RootNavigator() {
   const theme = useTheme();
   const { status, weddingId, restore } = useSession();
+  const guest = useGuestSession();
+  const { mode, setMode } = useMode();
+  useInviteLinks();
   useEffect(() => {
     void restore();
+    void guest.restore();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restore]);
+  // A phone with only a guest session opens straight into Guest mode.
+  useEffect(() => {
+    if (status === 'signedOut' && guest.status === 'signedIn') setMode('guest');
+  }, [status, guest.status, setMode]);
 
   const navTheme: NavTheme = useMemo(() => {
     const base = theme.scheme === 'dark' ? DarkTheme : DefaultTheme;
@@ -114,7 +178,7 @@ export function RootNavigator() {
     };
   }, [theme]);
 
-  if (status === 'loading') {
+  if (status === 'loading' || guest.status === 'loading') {
     return (
       <Screen>
         <Loading />
@@ -123,7 +187,24 @@ export function RootNavigator() {
   }
   return (
     <NavigationContainer theme={navTheme}>
-      {status === 'signedOut' ? <WelcomeNavigator /> : weddingId ? <HostNavigator /> : <PickerNavigator />}
+      {mode === 'guest' ? (
+        guest.status === 'signedIn' && guest.session ? (
+          guest.session.consentNeeded.length ? <ConsentScreen /> : <GuestNavigator />
+        ) : (
+          <GuestEntryFlow
+            onCancel={() => {
+              guest.setPendingToken(null);
+              setMode('host');
+            }}
+          />
+        )
+      ) : status === 'signedOut' ? (
+        <WelcomeNavigator />
+      ) : weddingId ? (
+        <HostNavigator />
+      ) : (
+        <PickerNavigator />
+      )}
     </NavigationContainer>
   );
 }

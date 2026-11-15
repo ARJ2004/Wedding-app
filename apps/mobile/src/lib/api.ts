@@ -1,6 +1,7 @@
 import { createApiClient, type Middleware } from '@mehfil/api-client';
 import { QueryClient } from '@tanstack/react-query';
 import { config } from './config';
+import { useGuestSession } from './guest-session';
 import { useSession } from './session';
 
 /** Error with the API's stable code, so screens can show the right message. */
@@ -14,15 +15,20 @@ export class ApiError extends Error {
   }
 }
 
+/** Guest endpoints use the guest identity; everything else the host identity. */
+const isGuest = (url: string) => url.includes('/v1/guest/');
+const tokenFor = (url: string) => (isGuest(url) ? useGuestSession.getState().accessToken : useSession.getState().accessToken);
+const refreshFor = (url: string) => (isGuest(url) ? useGuestSession.getState().refresh() : useSession.getState().refresh());
+
 const auth: Middleware = {
   async onRequest({ request }) {
-    const token = useSession.getState().accessToken;
+    const token = tokenFor(request.url);
     if (token) request.headers.set('Authorization', `Bearer ${token}`);
     return request;
   },
   async onResponse({ request, response }) {
     if (response.status !== 401 || request.headers.get('x-retried')) return response;
-    const token = await useSession.getState().refresh();
+    const token = await refreshFor(request.url);
     if (!token) return response;
     // openapi-fetch hands us a WHATWG Request; React Native's fetch accepts it at runtime but the
     // two lib typings differ, hence the narrow casts.
